@@ -12,3 +12,9 @@ Step by step :
 6. Logout and restart
 
 Still trying to figure out my options as graphic effects. Tried ordered dithering, thresholding, didn't manage to work around bayers dithering yet. Need to experiment some more.
+
+Update : I've decided to use 8x8 bayer matrix to apply ordered dithering. I like the low tech render of the thermal printed pictures.
+
+I will definitely keep updating this project. This is what I have in mind :
++ user generating personalized caption (emoji support)
++ better statistics
