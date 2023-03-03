@@ -20,9 +20,6 @@ now = datetime.now()
 dt_string = now.strftime("\n%d/%m/%y %H:%M")
 caption = (dt_string + "\n@ Your text here !")
 
-# set to keep track of processed UIDs
-processed_uids = set()
-
 # run an infinite loop to check for new messages every 15 seconds
 count = 0
 while True:
@@ -76,10 +73,28 @@ while True:
                     except Exception as e:
                         logger.error("couldnt process attachment %s" % filename)
                         p.text("Error converting image")
+                        p.cut()
 
                     # create a Pillow Image object
                     img = Image.open(image_data)
+                    
+                    # normalize the image orientation
+                    try:
+                        for orientation in ExifTags.TAGS.keys():
+                            if ExifTags.TAGS[orientation] == 'Orientation':
+                                break
+                        exif = dict(img._getexif().items())
 
+                        if exif[orientation] == 3:
+                            img = img.rotate(180, expand=True)
+                        elif exif[orientation] == 6:
+                            img = img.rotate(270, expand=True)
+                        elif exif[orientation] == 8:
+                            img = img.rotate(90, expand=True)
+                    except (AttributeError, KeyError, IndexError):
+                        # cases where there is no exif data available
+                        pass
+                    
                     # resize the image to fit the printer width
                     max_width = 576 # maximum width of the TM M30 printer
                     w, h = img.size
@@ -87,23 +102,44 @@ while True:
                         ratio = max_width / float(w)
                         h = int((float(h) * float(ratio)))
                         img = img.resize((max_width, h), Image.ANTIALIAS)
+                        # convert the image to grayscale
+                        img = img.convert('L')
 
-                    # print the image on the thermal printer
-                    p.image(img)
-                    logger.info("Printing %s" % filename)
+                        # apply Bayer matrix dithering
+                        dither_matrix = np.array([[0, 48, 12, 60, 3, 51, 15, 63],
+                                                [32, 16, 44, 28, 35, 19, 47, 31],
+                                                [8, 56, 4, 52, 11, 59, 7, 55],
+                                                [40, 24, 36, 20, 43, 27, 39, 23],
+                                                [2, 50, 14, 62, 1, 49, 13, 61],
+                                                [34, 18, 46, 30, 33, 17, 45, 29],
+                                                [10, 58, 6, 54, 9, 57, 5, 53],
+                                                [42, 26, 38, 22, 41, 25, 37, 21]])
+                        dither_matrix = (dither_matrix / 64) * 255
+                        dither_matrix = np.tile(dither_matrix, (int(new_h/8)+1, int(new_w/8)+1))[:new_h, :new_w]
 
-                    # add caption and cut
-                    p.text(caption)
-                    p.cut()
+                        img = np.array(img)
+                        img_dithered = np.zeros_like(img)
+                        img_dithered[img > dither_matrix] = 255
 
-                    # mark the email for deletion
-                    imap.uid("STORE", uid, "+FLAGS", "(\Deleted)")
+                        # convert numpy array back to Pillow Image object
+                        img_dithered = Image.fromarray(img_dithered.astype(np.uint8))
 
-        # close the connection to the email server
-        logger.info("Logging out of IMAP server...")
-        
+                        # print the image on the thermal printer
+                        p.image(img_dithered)
+                        logger.info("Printing %s" % filename)                       
+                    
+                        # add caption and cut
+                        p.text(caption)
+                        p.cut()
+
+                        # mark the email for deletion
+                        imap.uid("STORE", uid, "+FLAGS", "(\Deleted)")
+                        
         # permanently delete the marked emails and expunge the mailbox
         imap.expunge()
+        
+        # close the connection to the email server
+        logger.info("Logging out of IMAP server...")
         imap.close()
         imap.logout()
 
