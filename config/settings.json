@@ -5,6 +5,7 @@
     "brightness": 1.0,
     "sharpness": 1.0,
     "auto_rotate": true,
+    "grayscale_mode": "luminosity",
     "gamma": 1.0,
     "threshold": 128,
     "pre_blur": 0.0,

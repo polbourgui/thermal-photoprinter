@@ -14,6 +14,7 @@ class ImageSettings:
     sharpness: float = 1.0
     auto_rotate: bool = True
     # Visual rendering
+    grayscale_mode: str = "luminosity"   # luminosity | average | red | green | blue
     gamma: float = 1.0
     threshold: int = 128
     pre_blur: float = 0.0

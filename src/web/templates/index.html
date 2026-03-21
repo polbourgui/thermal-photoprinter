@@ -19,6 +19,9 @@
     hr { border-color: #333; }
     .btn-save { background: #6ea8fe; border: none; color: #000; font-weight: 600; }
     .btn-save:hover { background: #5b96ec; color: #000; }
+    .btn-preview { background: #2e2e2e; border: 1px solid #555; color: #e0e0e0; font-weight: 600; }
+    .btn-preview:hover { background: #3a3a3a; color: #fff; }
+    #preview-img { border: 1px solid #333; border-radius: 4px; display: block; width: 100%; image-rendering: pixelated; }
   </style>
 </head>
 <body>
@@ -46,6 +49,7 @@
                   ("bayer8x8",       "Bayer 8×8 (recommended)"),
                   ("bayer4x4",       "Bayer 4×4"),
                   ("floyd_steinberg","Floyd-Steinberg"),
+                  ("atkinson",       "Atkinson"),
                   ("threshold",      "Simple threshold"),
               ] %}
               <option value="{{ algo }}" {% if s.image.dither_algorithm == algo %}selected{% endif %}>
@@ -110,6 +114,23 @@
       <div class="card mb-3">
         <div class="card-header">Visual effects</div>
         <div class="card-body">
+
+          <div class="mb-3">
+            <label class="form-label">Grayscale conversion</label>
+            <select class="form-select" name="grayscale_mode">
+              {% for mode, label in [
+                  ("luminosity", "Luminosity — ITU-R 601 (default)"),
+                  ("average",    "Average RGB — flat/graphic look"),
+                  ("red",        "Red channel — warm skin tones"),
+                  ("green",      "Green channel — natural landscapes"),
+                  ("blue",       "Blue channel — sky, architecture"),
+              ] %}
+              <option value="{{ mode }}" {% if s.image.grayscale_mode == mode %}selected{% endif %}>
+                {{ label }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
 
           <div class="mb-3">
             <label class="form-label d-flex justify-content-between">
@@ -262,9 +283,61 @@
         </div>
       </div>
 
-      <button type="submit" class="btn btn-save w-100">Save settings</button>
+      <button type="submit" class="btn btn-save w-100 mb-4">Save settings</button>
 
     </form>
+
+    <!-- Preview -->
+    <div class="card mb-4">
+      <div class="card-header">Preview</div>
+      <div class="card-body">
+        <p class="text-muted mb-3" style="font-size:.8rem">
+          Upload a photo to see how it will print with the <strong>currently saved</strong> settings.
+        </p>
+        <div class="mb-3">
+          <input type="file" class="form-control" id="preview-file" accept="image/*">
+        </div>
+        <button type="button" class="btn btn-preview w-100 mb-3" id="preview-btn" onclick="doPreview()">
+          Preview
+        </button>
+        <div id="preview-result" style="display:none">
+          <img id="preview-img" alt="Preview">
+          <div class="text-muted mt-2" style="font-size:.72rem">
+            Rendered at printer resolution ({{ s.printer.max_width }}px wide).
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
+
+  <script>
+    async function doPreview() {
+      const input = document.getElementById('preview-file');
+      if (!input.files.length) {
+        input.focus();
+        return;
+      }
+      const btn = document.getElementById('preview-btn');
+      btn.textContent = 'Processing…';
+      btn.disabled = true;
+      try {
+        const form = new FormData();
+        form.append('file', input.files[0]);
+        const resp = await fetch('/preview', { method: 'POST', body: form });
+        if (!resp.ok) throw new Error(await resp.text());
+        const blob = await resp.blob();
+        const img = document.getElementById('preview-img');
+        if (img.src.startsWith('blob:')) URL.revokeObjectURL(img.src);
+        img.src = URL.createObjectURL(blob);
+        document.getElementById('preview-result').style.display = '';
+      } catch (e) {
+        alert('Preview failed: ' + e.message);
+      } finally {
+        btn.textContent = 'Preview';
+        btn.disabled = false;
+      }
+    }
+  </script>
 </body>
 </html>
