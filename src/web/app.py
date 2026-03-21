@@ -37,6 +37,14 @@ async def update_settings(
     brightness: float = Form(...),
     sharpness: float = Form(...),
     auto_rotate: str = Form("off"),
+    # Visual effects
+    gamma: float = Form(1.0),
+    threshold: int = Form(128),
+    pre_blur: float = Form(0.0),
+    vignette: float = Form(0.0),
+    grain: float = Form(0.0),
+    posterize_bits: int = Form(0),
+    invert: str = Form("off"),
     # Caption
     caption_enabled: str = Form("off"),
     caption_location: str = Form(""),
@@ -52,6 +60,13 @@ async def update_settings(
             brightness=round(brightness, 2),
             sharpness=round(sharpness, 2),
             auto_rotate=(auto_rotate == "on"),
+            gamma=round(gamma, 2),
+            threshold=max(0, min(255, threshold)),
+            pre_blur=round(pre_blur, 1),
+            vignette=round(vignette, 2),
+            grain=round(grain, 2),
+            posterize_bits=max(0, min(7, posterize_bits)),
+            invert=(invert == "on"),
         ),
         caption=CaptionSettings(
             enabled=(caption_enabled == "on"),

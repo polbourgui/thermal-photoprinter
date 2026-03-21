@@ -1,6 +1,6 @@
 import logging
 import numpy as np
-from PIL import Image, ImageEnhance
+from PIL import Image, ImageEnhance, ImageFilter, ImageOps
 from PIL.ExifTags import TAGS
 from io import BytesIO
 
@@ -44,17 +44,43 @@ def _fix_orientation(img: Image.Image) -> Image.Image:
     return img
 
 
-def _apply_dithering(img: Image.Image, algorithm: str) -> Image.Image:
+def _apply_gamma(arr: np.ndarray, gamma: float) -> np.ndarray:
+    """Apply gamma correction. gamma < 1 lightens midtones, gamma > 1 darkens them."""
+    corrected = np.power(arr / 255.0, gamma) * 255.0
+    return np.clip(corrected, 0, 255).astype(np.uint8)
+
+
+def _apply_vignette(arr: np.ndarray, strength: float) -> np.ndarray:
+    """Darken edges with a radial gradient (analog/film look)."""
+    h, w = arr.shape
+    yv, xv = np.mgrid[-1:1:complex(0, h), -1:1:complex(0, w)]
+    radius = np.sqrt(xv ** 2 + yv ** 2)
+    # Normalise so the corners = 1.0
+    radius /= radius.max()
+    mask = np.clip(1.0 - strength * radius ** 1.5, 0.0, 1.0)
+    return np.clip(arr * mask, 0, 255).astype(np.uint8)
+
+
+def _apply_grain(arr: np.ndarray, strength: float) -> np.ndarray:
+    """Add random film grain before dithering."""
+    noise = np.random.normal(0, strength * 40, arr.shape)
+    return np.clip(arr + noise, 0, 255).astype(np.uint8)
+
+
+def _apply_dithering(img: Image.Image, algorithm: str, threshold: int = 128) -> Image.Image:
     arr = np.array(img, dtype=np.float32)
     h, w = arr.shape
 
     if algorithm == "threshold":
-        result = np.where(arr > 128, 255, 0)
+        result = np.where(arr > threshold, 255, 0)
 
     elif algorithm in ("bayer4x4", "bayer8x8"):
         matrix = BAYER_4x4 if algorithm == "bayer4x4" else BAYER_8x8
         size = matrix.shape[0]
-        tiled = np.tile(matrix, (h // size + 1, w // size + 1))[:h, :w]
+        # Shift the Bayer matrix by the threshold offset so the user can bias
+        # overall exposure without changing the dither pattern shape.
+        offset = (threshold - 128) * (255.0 / 128.0)
+        tiled = np.tile(matrix, (h // size + 1, w // size + 1))[:h, :w] + offset
         result = np.where(arr > tiled, 255, 0)
 
     elif algorithm == "floyd_steinberg":
@@ -62,7 +88,7 @@ def _apply_dithering(img: Image.Image, algorithm: str) -> Image.Image:
 
     else:
         logger.warning("Unknown dither algorithm '%s', falling back to bayer8x8", algorithm)
-        return _apply_dithering(img, "bayer8x8")
+        return _apply_dithering(img, "bayer8x8", threshold)
 
     return Image.fromarray(result.astype(np.uint8))
 
@@ -83,14 +109,44 @@ def process_image(image_bytes: bytes, settings: Settings) -> Image.Image:
         img = img.resize((max_width, new_h), Image.Resampling.LANCZOS)
         logger.info("Resized to %sx%s", max_width, new_h)
 
-    # Apply enhancements before converting to grayscale
+    # Tone adjustments (still in colour so enhancements have full effect)
     img = ImageEnhance.Contrast(img).enhance(settings.image.contrast)
     img = ImageEnhance.Brightness(img).enhance(settings.image.brightness)
     img = ImageEnhance.Sharpness(img).enhance(settings.image.sharpness)
 
-    # Convert to grayscale then apply dithering
+    # Pre-blur softens edges before dithering (dreamy / lo-fi look)
+    if settings.image.pre_blur > 0:
+        img = img.filter(ImageFilter.GaussianBlur(radius=settings.image.pre_blur))
+
+    # Convert to grayscale — all remaining ops work on L mode
     img = img.convert("L")
-    img = _apply_dithering(img, settings.image.dither_algorithm)
-    logger.info("Dithering applied: %s", settings.image.dither_algorithm)
+
+    # Posterize: reduce tonal levels (graphic / silkscreen look)
+    if settings.image.posterize_bits > 0:
+        bits = max(1, min(7, settings.image.posterize_bits))
+        img = ImageOps.posterize(img, bits)
+
+    # Gamma correction: compensate for thermal printer's tendency to print dark
+    if settings.image.gamma != 1.0:
+        arr = _apply_gamma(np.array(img, dtype=np.float32), settings.image.gamma)
+        img = Image.fromarray(arr)
+
+    # Vignette: darken edges
+    if settings.image.vignette > 0:
+        arr = _apply_vignette(np.array(img, dtype=np.float32), settings.image.vignette)
+        img = Image.fromarray(arr)
+
+    # Film grain: random noise before dithering
+    if settings.image.grain > 0:
+        arr = _apply_grain(np.array(img, dtype=np.float32), settings.image.grain)
+        img = Image.fromarray(arr)
+
+    # Dithering
+    img = _apply_dithering(img, settings.image.dither_algorithm, settings.image.threshold)
+    logger.info("Dithering applied: %s (threshold=%d)", settings.image.dither_algorithm, settings.image.threshold)
+
+    # Invert: negative/white-on-black effect
+    if settings.image.invert:
+        img = ImageOps.invert(img)
 
     return img

@@ -13,6 +13,14 @@ class ImageSettings:
     brightness: float = 1.0
     sharpness: float = 1.0
     auto_rotate: bool = True
+    # Visual rendering
+    gamma: float = 1.0
+    threshold: int = 128
+    pre_blur: float = 0.0
+    vignette: float = 0.0
+    grain: float = 0.0
+    posterize_bits: int = 0   # 0 = disabled, 1-7 = progressive posterization
+    invert: bool = False
 
 
 @dataclass

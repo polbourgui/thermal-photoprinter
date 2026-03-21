@@ -4,7 +4,14 @@
     "contrast": 1.0,
     "brightness": 1.0,
     "sharpness": 1.0,
-    "auto_rotate": true
+    "auto_rotate": true,
+    "gamma": 1.0,
+    "threshold": 128,
+    "pre_blur": 0.0,
+    "vignette": 0.0,
+    "grain": 0.0,
+    "posterize_bits": 0,
+    "invert": false
   },
   "caption": {
     "enabled": true,

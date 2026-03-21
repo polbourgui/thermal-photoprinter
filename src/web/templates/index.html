@@ -40,7 +40,8 @@
 
           <div class="mb-3">
             <label class="form-label">Dithering algorithm</label>
-            <select class="form-select" name="dither_algorithm">
+            <select class="form-select" name="dither_algorithm"
+              onchange="document.getElementById('threshold-row').style.display = this.value === 'threshold' ? '' : 'none'">
               {% for algo, label in [
                   ("bayer8x8",       "Bayer 8×8 (recommended)"),
                   ("bayer4x4",       "Bayer 4×4"),
@@ -100,6 +101,108 @@
             <input class="form-check-input" type="checkbox" name="auto_rotate" id="auto_rotate" value="on"
               {% if s.image.auto_rotate %}checked{% endif %}>
             <label class="form-check-label" for="auto_rotate">Auto-rotate from EXIF</label>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Visual effects -->
+      <div class="card mb-3">
+        <div class="card-header">Visual effects</div>
+        <div class="card-body">
+
+          <div class="mb-3">
+            <label class="form-label d-flex justify-content-between">
+              Gamma
+              <span class="value-display" id="gamma-val">{{ s.image.gamma }}</span>
+            </label>
+            <input type="range" class="form-range" name="gamma" id="gamma"
+              min="0.3" max="2.5" step="0.05"
+              value="{{ s.image.gamma }}"
+              oninput="document.getElementById('gamma-val').textContent = parseFloat(this.value).toFixed(2)">
+            <div class="d-flex justify-content-between" style="font-size:.7rem;color:#555">
+              <span>0.3 (lighter)</span><span>1.0</span><span>2.5 (darker)</span>
+            </div>
+          </div>
+
+          <div class="mb-3" id="threshold-row" {% if s.image.dither_algorithm != 'threshold' %}style="display:none"{% endif %}>
+            <label class="form-label d-flex justify-content-between">
+              Threshold
+              <span class="value-display" id="threshold-val">{{ s.image.threshold }}</span>
+            </label>
+            <input type="range" class="form-range" name="threshold" id="threshold"
+              min="0" max="255" step="1"
+              value="{{ s.image.threshold }}"
+              oninput="document.getElementById('threshold-val').textContent = this.value">
+            <div class="d-flex justify-content-between" style="font-size:.7rem;color:#555">
+              <span>0 (all white)</span><span>128</span><span>255 (all black)</span>
+            </div>
+            <div class="form-text text-muted" style="font-size:.72rem">Also biases exposure for Bayer algorithms</div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label d-flex justify-content-between">
+              Pre-blur
+              <span class="value-display" id="preblur-val">{{ s.image.pre_blur }}</span>
+            </label>
+            <input type="range" class="form-range" name="pre_blur" id="pre_blur"
+              min="0" max="5" step="0.5"
+              value="{{ s.image.pre_blur }}"
+              oninput="document.getElementById('preblur-val').textContent = parseFloat(this.value).toFixed(1)">
+            <div class="d-flex justify-content-between" style="font-size:.7rem;color:#555">
+              <span>0 (off)</span><span>soft</span><span>5 (dreamy)</span>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label d-flex justify-content-between">
+              Vignette
+              <span class="value-display" id="vignette-val">{{ s.image.vignette }}</span>
+            </label>
+            <input type="range" class="form-range" name="vignette" id="vignette"
+              min="0" max="1" step="0.05"
+              value="{{ s.image.vignette }}"
+              oninput="document.getElementById('vignette-val').textContent = parseFloat(this.value).toFixed(2)">
+            <div class="d-flex justify-content-between" style="font-size:.7rem;color:#555">
+              <span>0 (off)</span><span>0.5</span><span>1.0 (strong)</span>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label d-flex justify-content-between">
+              Grain
+              <span class="value-display" id="grain-val">{{ s.image.grain }}</span>
+            </label>
+            <input type="range" class="form-range" name="grain" id="grain"
+              min="0" max="1" step="0.05"
+              value="{{ s.image.grain }}"
+              oninput="document.getElementById('grain-val').textContent = parseFloat(this.value).toFixed(2)">
+            <div class="d-flex justify-content-between" style="font-size:.7rem;color:#555">
+              <span>0 (off)</span><span>0.5</span><span>1.0 (strong)</span>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label d-flex justify-content-between">
+              Posterize
+              <span class="value-display" id="posterize-val">
+                {%- if s.image.posterize_bits == 0 -%}off
+                {%- else -%}{{ 2 ** s.image.posterize_bits }} levels{%- endif -%}
+              </span>
+            </label>
+            <input type="range" class="form-range" name="posterize_bits" id="posterize_bits"
+              min="0" max="7" step="1"
+              value="{{ s.image.posterize_bits }}"
+              oninput="document.getElementById('posterize-val').textContent = this.value == 0 ? 'off' : (Math.pow(2, parseInt(this.value)) + ' levels')">
+            <div class="d-flex justify-content-between" style="font-size:.7rem;color:#555">
+              <span>off</span><span>graphic</span><span>full (128 levels)</span>
+            </div>
+          </div>
+
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" name="invert" id="invert" value="on"
+              {% if s.image.invert %}checked{% endif %}>
+            <label class="form-check-label" for="invert">Invert (negative)</label>
           </div>
 
         </div>
