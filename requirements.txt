@@ -1,0 +1,9 @@
+python-telegram-bot==20.7
+Pillow>=10.0
+numpy
+python-escpos>=3.0
+python-dotenv
+fastapi
+uvicorn[standard]
+jinja2
+python-multipart

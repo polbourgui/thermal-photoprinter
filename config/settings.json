@@ -1,0 +1,18 @@
+{
+  "image": {
+    "dither_algorithm": "bayer8x8",
+    "contrast": 1.0,
+    "brightness": 1.0,
+    "sharpness": 1.0,
+    "auto_rotate": true
+  },
+  "caption": {
+    "enabled": true,
+    "location": "Home",
+    "show_date": true
+  },
+  "printer": {
+    "max_width": 576,
+    "align": "center"
+  }
+}

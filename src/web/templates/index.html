@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Thermal Printer</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+  <style>
+    body { background: #1a1a1a; color: #e0e0e0; }
+    .card { background: #242424; border: 1px solid #333; }
+    .card-header { background: #2e2e2e; border-bottom: 1px solid #333; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; font-size: .8rem; color: #aaa; }
+    .form-label { color: #bbb; font-size: .875rem; }
+    .form-range::-webkit-slider-thumb { background: #6ea8fe; }
+    .form-control, .form-select { background: #1a1a1a; border-color: #444; color: #e0e0e0; }
+    .form-control:focus, .form-select:focus { background: #1a1a1a; border-color: #6ea8fe; color: #e0e0e0; box-shadow: 0 0 0 .2rem rgba(110,168,254,.15); }
+    .form-check-input:checked { background-color: #6ea8fe; border-color: #6ea8fe; }
+    .badge-algorithm { font-size: .7rem; padding: .2em .5em; background: #333; color: #aaa; border-radius: 4px; }
+    .value-display { font-size: .8rem; color: #6ea8fe; min-width: 2.5rem; text-align: right; }
+    hr { border-color: #333; }
+    .btn-save { background: #6ea8fe; border: none; color: #000; font-weight: 600; }
+    .btn-save:hover { background: #5b96ec; color: #000; }
+  </style>
+</head>
+<body>
+  <div class="container py-4" style="max-width: 680px;">
+
+    <div class="d-flex align-items-center mb-4">
+      <div>
+        <h4 class="mb-0 fw-bold">🖨 Thermal Printer</h4>
+        <small class="text-muted">Settings</small>
+      </div>
+    </div>
+
+    <form method="post" action="/settings">
+
+      <!-- Image Processing -->
+      <div class="card mb-3">
+        <div class="card-header">Image Processing</div>
+        <div class="card-body">
+
+          <div class="mb-3">
+            <label class="form-label">Dithering algorithm</label>
+            <select class="form-select" name="dither_algorithm">
+              {% for algo, label in [
+                  ("bayer8x8",       "Bayer 8×8 (recommended)"),
+                  ("bayer4x4",       "Bayer 4×4"),
+                  ("floyd_steinberg","Floyd-Steinberg"),
+                  ("threshold",      "Simple threshold"),
+              ] %}
+              <option value="{{ algo }}" {% if s.image.dither_algorithm == algo %}selected{% endif %}>
+                {{ label }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label d-flex justify-content-between">
+              Contrast
+              <span class="value-display" id="contrast-val">{{ s.image.contrast }}</span>
+            </label>
+            <input type="range" class="form-range" name="contrast" id="contrast"
+              min="0.5" max="2.0" step="0.05"
+              value="{{ s.image.contrast }}"
+              oninput="document.getElementById('contrast-val').textContent = parseFloat(this.value).toFixed(2)">
+            <div class="d-flex justify-content-between" style="font-size:.7rem;color:#555">
+              <span>0.5</span><span>1.0</span><span>2.0</span>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label d-flex justify-content-between">
+              Brightness
+              <span class="value-display" id="brightness-val">{{ s.image.brightness }}</span>
+            </label>
+            <input type="range" class="form-range" name="brightness" id="brightness"
+              min="0.5" max="2.0" step="0.05"
+              value="{{ s.image.brightness }}"
+              oninput="document.getElementById('brightness-val').textContent = parseFloat(this.value).toFixed(2)">
+            <div class="d-flex justify-content-between" style="font-size:.7rem;color:#555">
+              <span>0.5</span><span>1.0</span><span>2.0</span>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label d-flex justify-content-between">
+              Sharpness
+              <span class="value-display" id="sharpness-val">{{ s.image.sharpness }}</span>
+            </label>
+            <input type="range" class="form-range" name="sharpness" id="sharpness"
+              min="0.0" max="3.0" step="0.1"
+              value="{{ s.image.sharpness }}"
+              oninput="document.getElementById('sharpness-val').textContent = parseFloat(this.value).toFixed(1)">
+            <div class="d-flex justify-content-between" style="font-size:.7rem;color:#555">
+              <span>0</span><span>1.0</span><span>3.0</span>
+            </div>
+          </div>
+
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" name="auto_rotate" id="auto_rotate" value="on"
+              {% if s.image.auto_rotate %}checked{% endif %}>
+            <label class="form-check-label" for="auto_rotate">Auto-rotate from EXIF</label>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Caption -->
+      <div class="card mb-3">
+        <div class="card-header">Caption</div>
+        <div class="card-body">
+
+          <div class="form-check form-switch mb-3">
+            <input class="form-check-input" type="checkbox" name="caption_enabled" id="caption_enabled" value="on"
+              {% if s.caption.enabled %}checked{% endif %}
+              onchange="document.getElementById('caption-fields').style.display = this.checked ? '' : 'none'">
+            <label class="form-check-label" for="caption_enabled">Enable caption</label>
+          </div>
+
+          <div id="caption-fields" {% if not s.caption.enabled %}style="display:none"{% endif %}>
+            <div class="mb-3">
+              <label class="form-label" for="caption_location">Location label</label>
+              <input type="text" class="form-control" name="caption_location" id="caption_location"
+                placeholder="e.g. Home, Paris, Studio…"
+                value="{{ s.caption.location }}">
+            </div>
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" name="caption_show_date" id="caption_show_date" value="on"
+                {% if s.caption.show_date %}checked{% endif %}>
+              <label class="form-check-label" for="caption_show_date">Show date &amp; time</label>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Printer -->
+      <div class="card mb-4">
+        <div class="card-header">Printer</div>
+        <div class="card-body">
+
+          <div class="row g-3">
+            <div class="col-sm-6">
+              <label class="form-label" for="max_width">Max print width (px)</label>
+              <input type="number" class="form-control" name="max_width" id="max_width"
+                min="1" max="832" value="{{ s.printer.max_width }}">
+              <div class="form-text text-muted" style="font-size:.75rem">TM-P80 = 576 px</div>
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label" for="align">Image alignment</label>
+              <select class="form-select" name="align" id="align">
+                {% for v, l in [("left","Left"),("center","Center"),("right","Right")] %}
+                <option value="{{ v }}" {% if s.printer.align == v %}selected{% endif %}>{{ l }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-save w-100">Save settings</button>
+
+    </form>
+  </div>
+</body>
+</html>

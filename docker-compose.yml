@@ -1,0 +1,13 @@
+services:
+  thermal-printer:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "8080:8080"
+    volumes:
+      # Settings persist here — safe to edit manually too
+      - ./config:/app/config
+    # USB printer access: mount the USB bus instead of running privileged
+    devices:
+      - /dev/bus/usb:/dev/bus/usb
