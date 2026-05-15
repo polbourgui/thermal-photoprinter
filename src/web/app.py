@@ -89,8 +89,10 @@ async def update_settings(
 @app.post("/preview")
 async def preview(file: UploadFile = File(...)):
     """Process an uploaded image with the current settings and return it as PNG."""
+    from io import BytesIO
+    from PIL import Image
     image_bytes = await file.read()
-    img = process_image(image_bytes, get_settings())
+    img = process_image(Image.open(BytesIO(image_bytes)), get_settings())
     buf = BytesIO()
     img.save(buf, format="PNG")
     buf.seek(0)

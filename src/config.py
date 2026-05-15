@@ -38,10 +38,18 @@ class PrinterSettings:
 
 
 @dataclass
+class HardwareSettings:
+    camera_device: int = 0
+    serial_port: str = "/dev/ttyACM0"
+    storage_path: str = "/photos"
+
+
+@dataclass
 class Settings:
     image: ImageSettings = field(default_factory=ImageSettings)
     caption: CaptionSettings = field(default_factory=CaptionSettings)
     printer: PrinterSettings = field(default_factory=PrinterSettings)
+    hardware: HardwareSettings = field(default_factory=HardwareSettings)
 
 
 _settings: Settings | None = None
@@ -56,6 +64,7 @@ def load_settings() -> Settings:
             image=ImageSettings(**data.get("image", {})),
             caption=CaptionSettings(**data.get("caption", {})),
             printer=PrinterSettings(**data.get("printer", {})),
+            hardware=HardwareSettings(**data.get("hardware", {})),
         )
     else:
         _settings = Settings()

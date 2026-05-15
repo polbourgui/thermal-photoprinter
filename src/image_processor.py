@@ -2,7 +2,6 @@ import logging
 import numpy as np
 from PIL import Image, ImageEnhance, ImageFilter, ImageOps
 from PIL.ExifTags import TAGS
-from io import BytesIO
 
 from config import Settings
 
@@ -133,9 +132,8 @@ def _apply_dithering(img: Image.Image, algorithm: str, threshold: int = 128) -> 
     return Image.fromarray(result.astype(np.uint8))
 
 
-def process_image(image_bytes: bytes, settings: Settings) -> Image.Image:
-    img = Image.open(BytesIO(image_bytes))
-    logger.info("Loaded image: %s %s", img.size, img.mode)
+def process_image(img: Image.Image, settings: Settings) -> Image.Image:
+    logger.info("Processing image: %s %s", img.size, img.mode)
 
     if settings.image.auto_rotate:
         img = _fix_orientation(img)
