@@ -1,9 +1,8 @@
 from dataclasses import asdict
-from io import BytesIO
 from pathlib import Path
 
-from fastapi import FastAPI, File, Form, Request, UploadFile
-from fastapi.responses import RedirectResponse, StreamingResponse
+from fastapi import FastAPI, Form, Request
+from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -15,7 +14,6 @@ from config import (
     get_settings,
     save_settings,
 )
-from image_processor import process_image
 
 app = FastAPI(title="Thermal Printer")
 
@@ -85,18 +83,6 @@ async def update_settings(
     save_settings(settings)
     return RedirectResponse(url="/", status_code=303)
 
-
-@app.post("/preview")
-async def preview(file: UploadFile = File(...)):
-    """Process an uploaded image with the current settings and return it as PNG."""
-    from io import BytesIO
-    from PIL import Image
-    image_bytes = await file.read()
-    img = process_image(Image.open(BytesIO(image_bytes)), get_settings())
-    buf = BytesIO()
-    img.save(buf, format="PNG")
-    buf.seek(0)
-    return StreamingResponse(buf, media_type="image/png")
 
 
 @app.get("/api/settings")
