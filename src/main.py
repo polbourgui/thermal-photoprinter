@@ -13,6 +13,7 @@ from config import load_settings, get_settings
 from esp32 import ESP32
 from image_processor import process_image
 from printer import print_image
+from shotgun import ShotgunClient
 from storage import Storage
 
 load_dotenv()
@@ -30,16 +31,30 @@ def _run_web() -> None:
     uvicorn.run("web.app:app", host="0.0.0.0", port=port, log_level="warning")
 
 
+_shotgun: ShotgunClient | None = None
+
+
 def _build_caption() -> str | None:
     s = get_settings().caption
     if not s.enabled:
         return None
+
     parts = []
-    if s.show_date:
-        parts.append(datetime.now().strftime("%Y-%m-%d %H:%M"))
-    if s.location:
+
+    # Shotgun event info takes priority over manual location
+    if _shotgun is not None:
+        event = _shotgun.get_current_event()
+        if event:
+            parts.append(event.name)
+            if event.headliner():
+                parts.append(event.headliner())
+    elif s.location:
         parts.append(s.location)
-    return "  ".join(parts) if parts else None
+
+    if s.show_date:
+        parts.append(datetime.now().strftime("%d/%m/%Y %H:%M"))
+
+    return "  •  ".join(parts) if parts else None
 
 
 def main() -> None:
@@ -52,6 +67,15 @@ def main() -> None:
     camera  = Camera(device=hw.camera_device)
     esp32   = ESP32(port=hw.serial_port)
     storage = Storage(base_path=hw.storage_path)
+
+    global _shotgun
+    sg_cfg = settings.shotgun
+    if sg_cfg.enabled and sg_cfg.organizer_id:
+        _shotgun = ShotgunClient(organizer_id=sg_cfg.organizer_id)
+        _shotgun.force_refresh()
+        logger.info("Shotgun integration active (organizer: %s)", sg_cfg.organizer_id)
+    else:
+        logger.info("Shotgun integration disabled")
 
     camera.open()
     esp32.open()

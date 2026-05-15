@@ -8,3 +8,4 @@ jinja2
 python-multipart
 pyserial
 opencv-python
+requests

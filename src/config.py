@@ -38,6 +38,13 @@ class PrinterSettings:
 
 
 @dataclass
+class ShotgunSettings:
+    enabled: bool = False
+    organizer_id: str = ""
+    refresh_interval_minutes: int = 30
+
+
+@dataclass
 class HardwareSettings:
     camera_device: int = 0
     serial_port: str = "/dev/ttyACM0"
@@ -50,6 +57,7 @@ class Settings:
     caption: CaptionSettings = field(default_factory=CaptionSettings)
     printer: PrinterSettings = field(default_factory=PrinterSettings)
     hardware: HardwareSettings = field(default_factory=HardwareSettings)
+    shotgun: ShotgunSettings = field(default_factory=ShotgunSettings)
 
 
 _settings: Settings | None = None
@@ -65,6 +73,7 @@ def load_settings() -> Settings:
             caption=CaptionSettings(**data.get("caption", {})),
             printer=PrinterSettings(**data.get("printer", {})),
             hardware=HardwareSettings(**data.get("hardware", {})),
+            shotgun=ShotgunSettings(**data.get("shotgun", {})),
         )
     else:
         _settings = Settings()
