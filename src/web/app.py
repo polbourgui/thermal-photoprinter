@@ -3,7 +3,7 @@ from io import BytesIO
 from pathlib import Path
 
 from fastapi import FastAPI, Form, Request
-from fastapi.responses import RedirectResponse, StreamingResponse
+from fastapi.responses import JSONResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -17,6 +17,7 @@ from config import (
     save_settings,
 )
 from layout import make_mockup, list_available_fonts
+import trigger as trig
 
 app = FastAPI(title="Photobooth")
 
@@ -135,3 +136,15 @@ async def api_fonts():
 @app.get("/api/settings")
 async def api_settings():
     return asdict(get_settings())
+
+
+@app.post("/trigger")
+async def virtual_trigger():
+    """Simulate a button press — for testing without physical hardware."""
+    fired = trig.fire()
+    if fired:
+        return JSONResponse({"status": "ok", "message": "Trigger fired"})
+    return JSONResponse(
+        {"status": "busy", "message": "Shot already in progress"},
+        status_code=409,
+    )

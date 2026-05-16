@@ -1,3 +1,4 @@
+import argparse
 import logging
 import os
 import sys
@@ -8,6 +9,7 @@ from datetime import datetime
 import uvicorn
 from dotenv import load_dotenv
 
+import trigger as trig
 from camera import Camera
 from config import load_settings, get_settings
 from counter import next_proof_number
@@ -48,16 +50,43 @@ def _get_event_info() -> tuple[str, str]:
     return s.location, ""
 
 
+def _serial_reader(esp: ESP32) -> None:
+    """Background thread: relay BTN_PRESS from ESP8266 to the shared trigger."""
+    while True:
+        line = esp._readline()
+        if line == "BTN_PRESS":
+            fired = trig.fire()
+            logger.info(
+                "BTN_PRESS from ESP8266%s",
+                "" if fired else " (ignored — shot in progress)",
+            )
+        elif line and line != "BTN_RELEASE":
+            logger.debug("← ESP8266: %s", line)
+        time.sleep(0.005)
+
+
+def _parse_args() -> argparse.Namespace:
+    p = argparse.ArgumentParser(description="Thermal photobooth")
+    p.add_argument("--no-camera",  action="store_true", help="Skip camera (use gray placeholder)")
+    p.add_argument("--no-printer", action="store_true", help="Skip printing (save only)")
+    p.add_argument("--no-esp",     action="store_true", help="Skip ESP8266 (LEDs disabled)")
+    return p.parse_args()
+
+
 def main() -> None:
+    args     = _parse_args()
     settings = load_settings()
-    hw = settings.hardware
+    hw       = settings.hardware
 
     threading.Thread(target=_run_web, daemon=True, name="web").start()
     logger.info("Web UI started on port %s", os.getenv("WEB_PORT", "8080"))
 
-    camera  = Camera(device=hw.camera_device)
-    esp32   = ESP32(port=hw.serial_port)
+    camera  = Camera(device=hw.camera_device) if not args.no_camera else None
     storage = Storage(base_path=hw.storage_path)
+
+    esp: ESP32 | None = None
+    if not args.no_esp:
+        esp = ESP32(port=hw.serial_port)
 
     global _shotgun
     sg_cfg = settings.shotgun
@@ -68,38 +97,60 @@ def main() -> None:
     else:
         logger.info("Shotgun integration disabled")
 
-    camera.open()
-    esp32.open()
-    esp32.wait_for_ready()
-    esp32.send("IDLE")
+    if camera:
+        camera.open()
 
-    logger.info("Photobooth ready")
+    if esp:
+        esp.open()
+        esp.wait_for_ready()
+        esp.send("IDLE")
+        threading.Thread(target=_serial_reader, args=(esp,), daemon=True, name="serial-reader").start()
+    else:
+        logger.warning("ESP8266 skipped — trigger via web UI (/trigger) or keyboard")
+
+    if args.no_camera:
+        logger.warning("Camera skipped — gray placeholder will be used")
+    if args.no_printer:
+        logger.warning("Printer skipped — tickets saved but not printed")
+
+    logger.info("Photobooth ready — waiting for trigger")
+    trig.arm()
 
     while True:
         try:
             # ── IDLE ─────────────────────────────────────────────
-            logger.info("Waiting for button press")
-            esp32.wait_for_btn_press()
+            logger.info("Waiting for trigger (web UI /trigger or physical button)")
+            trig.wait()
+            trig.disarm()
 
             # ── COUNTDOWN ────────────────────────────────────────
             logger.info("Countdown started")
-            esp32.send("COUNTDOWN")
+            if esp:
+                esp.send("COUNTDOWN")
             time.sleep(3.0)
 
             # ── FLASH + CAPTURE ───────────────────────────────────
-            esp32.send("FLASH")
-            time.sleep(0.1)          # let ring reach full brightness
-            raw_image = camera.capture()
-            logger.info("Photo captured")
+            if esp:
+                esp.send("FLASH")
+            time.sleep(0.1)
+
+            if camera:
+                raw_image = camera.capture()
+                logger.info("Photo captured")
+            else:
+                from PIL import Image as _PILImage
+                raw_image = _PILImage.new("RGB", (1200, 1600), (180, 180, 180))
+                logger.info("Placeholder image used (no camera)")
 
             # ── PROCESS ──────────────────────────────────────────
-            esp32.send("PRINTING")
-            current_settings = get_settings()   # picks up any live web UI changes
+            if esp:
+                esp.send("PRINTING")
+            current_settings = get_settings()
             print_img = process_image(raw_image, current_settings)
 
             # ── COMPOSE TICKET ────────────────────────────────────
-            venue, artists  = _get_event_info()
-            proof_number    = next_proof_number()
+            venue, artists = _get_event_info()
+            proof_number   = next_proof_number()
             ticket = compose_ticket(
                 print_img, venue, artists, proof_number, datetime.now(), current_settings
             )
@@ -108,26 +159,38 @@ def main() -> None:
             storage.save_pair(raw_image, ticket)
 
             # ── PRINT ─────────────────────────────────────────────
-            print_ticket(ticket)
+            if not args.no_printer:
+                print_ticket(ticket)
+            else:
+                logger.info("Print skipped (--no-printer)")
 
             # ── DONE ─────────────────────────────────────────────
-            esp32.send("DONE")
-            time.sleep(1.5)          # wait for DONE animation to finish
-            esp32.send("IDLE")
+            if esp:
+                esp.send("DONE")
+            time.sleep(1.5)
+            if esp:
+                esp.send("IDLE")
+            trig.arm()
 
         except KeyboardInterrupt:
             logger.info("Shutting down")
-            esp32.send("ERROR")
+            if esp:
+                esp.send("ERROR")
             break
 
         except Exception as exc:
             logger.error("Error in main loop: %s", exc, exc_info=True)
-            esp32.send("ERROR")
+            if esp:
+                esp.send("ERROR")
+            trig.arm()
             time.sleep(3.0)
-            esp32.send("IDLE")
+            if esp:
+                esp.send("IDLE")
 
-    camera.close()
-    esp32.close()
+    if camera:
+        camera.close()
+    if esp:
+        esp.close()
 
 
 if __name__ == "__main__":

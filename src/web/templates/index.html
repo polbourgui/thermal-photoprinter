@@ -405,6 +405,25 @@
 
     </form>
 
+    <!-- Virtual trigger -->
+    <div class="card mb-4" style="border-color:#555;">
+      <div class="card-header" style="background:#2e2e2e; color:#ffc107;">Virtual trigger</div>
+      <div class="card-body text-center py-4">
+        <p class="text-muted mb-3" style="font-size:.85rem">
+          Simulate a button press — for testing without physical hardware.<br>
+          The full sequence runs: countdown → flash → capture → process → save → print.
+        </p>
+        <button id="trigger-btn" type="button"
+          onclick="fireTrigger()"
+          style="font-size:1.2rem; font-weight:700; padding:.6rem 2.5rem;
+                 background:#ffc107; border:none; border-radius:6px; color:#000;
+                 cursor:pointer; letter-spacing:.05em; text-transform:uppercase;">
+          ⊙ Take a photo
+        </button>
+        <div id="trigger-msg" class="mt-2" style="font-size:.8rem; min-height:1.2em;"></div>
+      </div>
+    </div>
+
     <!-- Ticket mockup -->
     <div class="card mb-4">
       <div class="card-header d-flex justify-content-between align-items-center">
@@ -435,10 +454,42 @@
       const img = document.getElementById('mockup-img');
       img.src = '/mockup?' + Date.now();
     }
-    // Auto-refresh after form submit
     document.querySelector('form').addEventListener('submit', () => {
       setTimeout(refreshMockup, 800);
     });
+
+    async function fireTrigger() {
+      const btn = document.getElementById('trigger-btn');
+      const msg = document.getElementById('trigger-msg');
+      btn.disabled = true;
+      btn.textContent = '⏳ Firing…';
+      msg.style.color = '#aaa';
+      msg.textContent = '';
+      try {
+        const r = await fetch('/trigger', { method: 'POST' });
+        const data = await r.json();
+        if (r.ok) {
+          msg.style.color = '#6ea8fe';
+          msg.textContent = data.message;
+          // Re-arm button after sequence completes (~8s)
+          setTimeout(() => {
+            btn.disabled = false;
+            btn.textContent = '⊙ Take a photo';
+            msg.textContent = '';
+          }, 8000);
+        } else {
+          msg.style.color = '#f97316';
+          msg.textContent = data.message;
+          btn.disabled = false;
+          btn.textContent = '⊙ Take a photo';
+        }
+      } catch (e) {
+        msg.style.color = '#f97316';
+        msg.textContent = 'Connection error';
+        btn.disabled = false;
+        btn.textContent = '⊙ Take a photo';
+      }
+    }
   </script>
 </body>
 </html>
