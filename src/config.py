@@ -63,7 +63,7 @@ class ShotgunSettings:
 class HardwareSettings:
     camera_device: int = 0
     serial_port: str = "/dev/ttyUSB0"
-    storage_path: str = "/photos"
+    storage_path: str = "photos"
 
 
 @dataclass
