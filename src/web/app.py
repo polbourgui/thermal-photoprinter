@@ -28,7 +28,7 @@ app.mount("/static", StaticFiles(directory=_base / "static"), name="static")
 @app.get("/")
 async def index(request: Request):
     return templates.TemplateResponse(
-        "index.html", {"request": request, "s": get_settings()}
+        request=request, name="index.html", context={"s": get_settings()}
     )
 
 
