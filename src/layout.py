@@ -21,13 +21,16 @@ from config import Settings
 
 logger = logging.getLogger(__name__)
 
-_FONT_REGULAR = [
+# Project-local fonts directory (relative to repo root, resolved at call time)
+_FONTS_DIR = Path(__file__).parent.parent / "fonts"
+
+_SYSTEM_REGULAR = [
     "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
     "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
     "/usr/share/fonts/TTF/DejaVuSans.ttf",
     "/usr/share/fonts/truetype/freefont/FreeSans.ttf",
 ]
-_FONT_BOLD = [
+_SYSTEM_BOLD = [
     "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
     "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
     "/usr/share/fonts/TTF/DejaVuSans-Bold.ttf",
@@ -35,19 +38,62 @@ _FONT_BOLD = [
 ]
 
 
-def _load_font(size: int, bold: bool = False) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
-    candidates = _FONT_BOLD if bold else _FONT_REGULAR
-    for path in candidates:
-        if Path(path).exists():
+def _load_font(
+    size: int,
+    name: str = "",
+    bold: bool = False,
+) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
+    """
+    Load a font at the given pixel size.
+
+    Priority:
+      1. fonts/<name>  if name is provided and the file exists
+      2. System font candidates (bold variant if bold=True)
+      3. Pillow default bitmap font (last resort)
+    """
+    if name:
+        path = _FONTS_DIR / name
+        if path.exists():
             try:
-                return ImageFont.truetype(path, size)
+                return ImageFont.truetype(str(path), size)
+            except OSError as exc:
+                logger.warning("Cannot load font %s: %s", path, exc)
+
+    candidates = _SYSTEM_BOLD if bold else _SYSTEM_REGULAR
+    for path_str in candidates:
+        if Path(path_str).exists():
+            try:
+                return ImageFont.truetype(path_str, size)
             except OSError:
                 continue
+
     if bold:
-        # fallback: try regular
-        return _load_font(size, bold=False)
+        return _load_font(size, name="", bold=False)
+
     logger.warning("No TTF font found — using Pillow default")
     return ImageFont.load_default()
+
+
+def list_available_fonts() -> list[dict]:
+    """
+    Return fonts available for selection in the web UI.
+    Includes files from fonts/ dir and known system fonts.
+    """
+    fonts = []
+
+    # Project fonts
+    if _FONTS_DIR.exists():
+        for f in sorted(_FONTS_DIR.iterdir()):
+            if f.suffix.lower() in (".ttf", ".otf"):
+                fonts.append({"name": f.name, "source": "project"})
+
+    # System fonts
+    for path_str in _SYSTEM_REGULAR + _SYSTEM_BOLD:
+        p = Path(path_str)
+        if p.exists():
+            fonts.append({"name": p.name, "source": "system", "path": path_str})
+
+    return fonts
 
 
 def _text_size(draw: ImageDraw.ImageDraw, text: str, font) -> tuple[int, int]:
@@ -59,8 +105,8 @@ def _text_size(draw: ImageDraw.ImageDraw, text: str, font) -> tuple[int, int]:
 
 def _render_header(width: int, proof_number: int, settings: Settings) -> Image.Image:
     lo = settings.layout
-    logo_font  = _load_font(lo.logo_font_size, bold=True)
-    proof_font = _load_font(lo.proof_font_size)
+    logo_font  = _load_font(lo.logo_font_size, name=lo.font_logo, bold=True)
+    proof_font = _load_font(lo.proof_font_size, name=lo.font_body)
 
     pad_v = 10
     _, logo_h = _text_size(ImageDraw.Draw(Image.new("L", (1, 1))), "PROOF", logo_font)
@@ -93,7 +139,7 @@ def _render_footer(
     settings: Settings,
 ) -> Image.Image:
     lo   = settings.layout
-    font = _load_font(lo.footer_font_size)
+    font = _load_font(lo.footer_font_size, name=lo.font_body)
 
     dummy = ImageDraw.Draw(Image.new("L", (1, 1)))
     _, line_h = _text_size(dummy, "Ag", font)
@@ -192,7 +238,7 @@ def make_mockup(settings: Settings) -> Image.Image:
     for y in range(0, photo_h, step_y):
         draw.line([(0, y), (photo_w, y)], fill=200, width=1)
 
-    font = _load_font(settings.layout.footer_font_size)
+    font = _load_font(settings.layout.footer_font_size, name=settings.layout.font_body)
     label = f"{photo_w} × {photo_h} px"
     dummy_draw = ImageDraw.Draw(Image.new("L", (1, 1)))
     lw, lh = _text_size(dummy_draw, label, font)

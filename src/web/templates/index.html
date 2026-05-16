@@ -289,6 +289,34 @@
         <div class="card-body">
 
           <div class="row g-3 mb-3">
+            <div class="col-sm-6">
+              <label class="form-label" for="font_logo">Police logo (PROOF)</label>
+              <select class="form-select" name="font_logo" id="font_logo">
+                <option value="" {% if not s.layout.font_logo %}selected{% endif %}>Système (défaut bold)</option>
+                {% for f in fonts %}
+                <option value="{{ f.name }}"
+                  {% if s.layout.font_logo == f.name %}selected{% endif %}>
+                  {{ f.name }}{% if f.source == 'project' %} ★{% endif %}
+                </option>
+                {% endfor %}
+              </select>
+              <div class="form-text text-muted" style="font-size:.72rem">★ = police dans fonts/</div>
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label" for="font_body">Police corps (footer / numéro)</label>
+              <select class="form-select" name="font_body" id="font_body">
+                <option value="" {% if not s.layout.font_body %}selected{% endif %}>Système (défaut regular)</option>
+                {% for f in fonts %}
+                <option value="{{ f.name }}"
+                  {% if s.layout.font_body == f.name %}selected{% endif %}>
+                  {{ f.name }}{% if f.source == 'project' %} ★{% endif %}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+
+          <div class="row g-3 mb-3">
             <div class="col-sm-4">
               <label class="form-label" for="margin_top">Marge haut (px)</label>
               <input type="number" class="form-control" name="margin_top" id="margin_top"

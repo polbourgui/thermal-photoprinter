@@ -16,7 +16,7 @@ from config import (
     get_settings,
     save_settings,
 )
-from layout import make_mockup
+from layout import make_mockup, list_available_fonts
 
 app = FastAPI(title="Photobooth")
 
@@ -28,7 +28,8 @@ app.mount("/static", StaticFiles(directory=_base / "static"), name="static")
 @app.get("/")
 async def index(request: Request):
     return templates.TemplateResponse(
-        request=request, name="index.html", context={"s": get_settings()}
+        request=request, name="index.html",
+        context={"s": get_settings(), "fonts": list_available_fonts()},
     )
 
 
@@ -55,7 +56,10 @@ async def update_settings(
     # Printer
     max_width: int = Form(576),
     align: str = Form("center"),
-    # Layout
+    # Layout — fonts
+    font_logo: str = Form(""),
+    font_body: str = Form(""),
+    # Layout — spacing
     margin_top: int = Form(12),
     margin_bottom: int = Form(24),
     margin_sides: int = Form(8),
@@ -92,6 +96,8 @@ async def update_settings(
             align=align,
         ),
         layout=LayoutSettings(
+            font_logo=font_logo,
+            font_body=font_body,
             margin_top=max(0, margin_top),
             margin_bottom=max(0, margin_bottom),
             margin_sides=max(0, margin_sides),
@@ -119,6 +125,11 @@ async def mockup():
         media_type="image/png",
         headers={"Cache-Control": "no-store"},
     )
+
+
+@app.get("/api/fonts")
+async def api_fonts():
+    return list_available_fonts()
 
 
 @app.get("/api/settings")
