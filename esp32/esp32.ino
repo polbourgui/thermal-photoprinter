@@ -12,7 +12,7 @@
 #define BTN_LED_PIN  12  // D6
 #define BTN_PIN      14  // D5
 
-#define NUM_LEDS     60
+#define NUM_LEDS     111
 #define BAUD_RATE    115200
 #define DEBOUNCE_MS  50
 #define FLASH_MS     300
