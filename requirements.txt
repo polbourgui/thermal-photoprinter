@@ -1,6 +1,7 @@
 Pillow>=10.0
 numpy
 python-escpos>=3.0
+pyusb
 python-dotenv
 fastapi
 uvicorn[standard]
