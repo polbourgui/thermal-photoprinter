@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 def _get_printer():
     import escpos.printer
     vendor_id  = int(os.getenv("PRINTER_VENDOR_ID",  "0x04b8"), 16)
-    product_id = int(os.getenv("PRINTER_PRODUCT_ID", "0x0e02"), 16)
+    product_id = int(os.getenv("PRINTER_PRODUCT_ID", "0x0e20"), 16)  # TM-m30 Bluetooth/USB
     profile    = os.getenv("PRINTER_PROFILE", "TM-m30")
     return escpos.printer.Usb(vendor_id, product_id, profile=profile)
 

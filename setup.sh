@@ -77,8 +77,9 @@ RULES=/etc/udev/rules.d/60-photobooth.rules
 if [[ ! -f "$RULES" ]]; then
     info "Installing udev rules → $RULES (requires sudo)…"
     sudo tee "$RULES" > /dev/null <<'RULES'
-# Epson TM-M30 thermal printer
+# Epson TM-M30 thermal printer (0e02 = USB, 0e20 = Bluetooth/USB combo)
 SUBSYSTEM=="usb", ATTRS{idVendor}=="04b8", ATTRS{idProduct}=="0e02", MODE="0666", GROUP="plugdev"
+SUBSYSTEM=="usb", ATTRS{idVendor}=="04b8", ATTRS{idProduct}=="0e20", MODE="0666", GROUP="plugdev"
 # ESP8266 CH340G (most NodeMCU clones)
 SUBSYSTEM=="tty", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="7523", MODE="0666", GROUP="dialout", SYMLINK+="ttyESP8266"
 # ESP8266 CP2102 (some Wemos D1 Mini)
