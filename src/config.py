@@ -38,6 +38,17 @@ class PrinterSettings:
 
 
 @dataclass
+class LayoutSettings:
+    margin_top: int = 10           # px above first element
+    margin_bottom: int = 20        # px below last element
+    margin_sides: int = 0          # px left and right
+    caption_position: str = "bottom"  # "top" | "bottom" | "none"
+    caption_font_size: int = 22
+    caption_padding: int = 14      # px between photo and caption text
+    separator: bool = False        # thin line between photo and caption
+
+
+@dataclass
 class ShotgunSettings:
     enabled: bool = False
     organizer_id: str = ""
@@ -58,6 +69,7 @@ class Settings:
     printer: PrinterSettings = field(default_factory=PrinterSettings)
     hardware: HardwareSettings = field(default_factory=HardwareSettings)
     shotgun: ShotgunSettings = field(default_factory=ShotgunSettings)
+    layout: LayoutSettings = field(default_factory=LayoutSettings)
 
 
 _settings: Settings | None = None
@@ -74,6 +86,7 @@ def load_settings() -> Settings:
             printer=PrinterSettings(**data.get("printer", {})),
             hardware=HardwareSettings(**data.get("hardware", {})),
             shotgun=ShotgunSettings(**data.get("shotgun", {})),
+            layout=LayoutSettings(**data.get("layout", {})),
         )
     else:
         _settings = Settings()

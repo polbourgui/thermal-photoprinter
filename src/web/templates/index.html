@@ -283,28 +283,99 @@
         </div>
       </div>
 
+      <!-- Layout -->
+      <div class="card mb-4">
+        <div class="card-header">Ticket layout</div>
+        <div class="card-body">
+
+          <div class="row g-3 mb-3">
+            <div class="col-sm-4">
+              <label class="form-label" for="margin_top">Margin top (px)</label>
+              <input type="number" class="form-control" name="margin_top" id="margin_top"
+                min="0" max="200" value="{{ s.layout.margin_top }}">
+            </div>
+            <div class="col-sm-4">
+              <label class="form-label" for="margin_bottom">Margin bottom (px)</label>
+              <input type="number" class="form-control" name="margin_bottom" id="margin_bottom"
+                min="0" max="200" value="{{ s.layout.margin_bottom }}">
+            </div>
+            <div class="col-sm-4">
+              <label class="form-label" for="margin_sides">Margin sides (px)</label>
+              <input type="number" class="form-control" name="margin_sides" id="margin_sides"
+                min="0" max="100" value="{{ s.layout.margin_sides }}">
+            </div>
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-sm-6">
+              <label class="form-label" for="caption_position">Caption position</label>
+              <select class="form-select" name="caption_position" id="caption_position">
+                {% for v, l in [("bottom","Below photo"),("top","Above photo"),("none","Hidden")] %}
+                <option value="{{ v }}" {% if s.layout.caption_position == v %}selected{% endif %}>{{ l }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label d-flex justify-content-between">
+                Caption font size
+                <span class="value-display" id="font-size-val">{{ s.layout.caption_font_size }}</span>
+              </label>
+              <input type="range" class="form-range" name="caption_font_size" id="caption_font_size"
+                min="10" max="60" step="1"
+                value="{{ s.layout.caption_font_size }}"
+                oninput="document.getElementById('font-size-val').textContent = this.value">
+              <div class="d-flex justify-content-between" style="font-size:.7rem;color:#555">
+                <span>10</span><span>22</span><span>60</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-sm-6">
+              <label class="form-label d-flex justify-content-between">
+                Padding photo ↔ caption (px)
+                <span class="value-display" id="padding-val">{{ s.layout.caption_padding }}</span>
+              </label>
+              <input type="range" class="form-range" name="caption_padding" id="caption_padding"
+                min="0" max="60" step="2"
+                value="{{ s.layout.caption_padding }}"
+                oninput="document.getElementById('padding-val').textContent = this.value">
+            </div>
+            <div class="col-sm-6 d-flex align-items-end pb-1">
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" name="separator" id="separator" value="on"
+                  {% if s.layout.separator %}checked{% endif %}>
+                <label class="form-check-label" for="separator">Separator line</label>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
       <button type="submit" class="btn btn-save w-100 mb-4">Save settings</button>
 
     </form>
 
-    <!-- Preview -->
+    <!-- Ticket mockup -->
     <div class="card mb-4">
-      <div class="card-header">Preview</div>
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span>Ticket mockup</span>
+        <button type="button" class="btn btn-sm btn-preview" onclick="refreshMockup()">Refresh</button>
+      </div>
       <div class="card-body">
         <p class="text-muted mb-3" style="font-size:.8rem">
-          Upload a photo to see how it will print with the <strong>currently saved</strong> settings.
+          Exact ticket layout at printer resolution ({{ s.printer.max_width }}px = 80mm).
+          The gray area represents the photo. Updates after each <strong>Save</strong>.
         </p>
-        <div class="mb-3">
-          <input type="file" class="form-control" id="preview-file" accept="image/*">
+        <div style="background:#f5f5f5; padding:16px; border-radius:6px; display:flex; justify-content:center;">
+          <img id="mockup-img"
+            src="/mockup"
+            alt="Ticket mockup"
+            style="max-width:100%; box-shadow:0 2px 12px rgba(0,0,0,.25); image-rendering:pixelated;">
         </div>
-        <button type="button" class="btn btn-preview w-100 mb-3" id="preview-btn" onclick="doPreview()">
-          Preview
-        </button>
-        <div id="preview-result" style="display:none">
-          <img id="preview-img" alt="Preview">
-          <div class="text-muted mt-2" style="font-size:.72rem">
-            Rendered at printer resolution ({{ s.printer.max_width }}px wide).
-          </div>
+        <div class="text-muted mt-2" style="font-size:.72rem">
+          Caption sample uses placeholder text. Actual content comes from Shotgun or manual settings.
         </div>
       </div>
     </div>
@@ -312,32 +383,14 @@
   </div>
 
   <script>
-    async function doPreview() {
-      const input = document.getElementById('preview-file');
-      if (!input.files.length) {
-        input.focus();
-        return;
-      }
-      const btn = document.getElementById('preview-btn');
-      btn.textContent = 'Processing…';
-      btn.disabled = true;
-      try {
-        const form = new FormData();
-        form.append('file', input.files[0]);
-        const resp = await fetch('/preview', { method: 'POST', body: form });
-        if (!resp.ok) throw new Error(await resp.text());
-        const blob = await resp.blob();
-        const img = document.getElementById('preview-img');
-        if (img.src.startsWith('blob:')) URL.revokeObjectURL(img.src);
-        img.src = URL.createObjectURL(blob);
-        document.getElementById('preview-result').style.display = '';
-      } catch (e) {
-        alert('Preview failed: ' + e.message);
-      } finally {
-        btn.textContent = 'Preview';
-        btn.disabled = false;
-      }
+    function refreshMockup() {
+      const img = document.getElementById('mockup-img');
+      img.src = '/mockup?' + Date.now();
     }
+    // Auto-refresh after form submit
+    document.querySelector('form').addEventListener('submit', () => {
+      setTimeout(refreshMockup, 800);
+    });
   </script>
 </body>
 </html>

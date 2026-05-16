@@ -9,18 +9,17 @@ logger = logging.getLogger(__name__)
 
 def _get_printer():
     import escpos.printer
-    vendor_id = int(os.getenv("PRINTER_VENDOR_ID", "0x04b8"), 16)
-    product_id = int(os.getenv("PRINTER_PRODUCT_ID", "0x0e20"), 16)
-    profile = os.getenv("PRINTER_PROFILE", "TM-P80")
+    vendor_id  = int(os.getenv("PRINTER_VENDOR_ID",  "0x04b8"), 16)
+    product_id = int(os.getenv("PRINTER_PRODUCT_ID", "0x0e02"), 16)
+    profile    = os.getenv("PRINTER_PROFILE", "TM-m30")
     return escpos.printer.Usb(vendor_id, product_id, profile=profile)
 
 
-def print_image(img: Image.Image, caption: str | None = None) -> None:
+def print_ticket(ticket: Image.Image) -> None:
+    """Send a fully composed ticket image to the printer."""
     settings = get_settings()
     p = _get_printer()
     p.set(align=settings.printer.align)
-    p.image(img)
-    if caption:
-        p.text(caption)
+    p.image(ticket)
     p.cut()
-    logger.info("Printed successfully (caption=%s)", bool(caption))
+    logger.info("Printed ticket (%dx%d px)", ticket.width, ticket.height)

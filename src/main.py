@@ -12,7 +12,8 @@ from camera import Camera
 from config import load_settings, get_settings
 from esp32 import ESP32
 from image_processor import process_image
-from printer import print_image
+from layout import compose_ticket
+from printer import print_ticket
 from shotgun import ShotgunClient
 from storage import Storage
 
@@ -106,11 +107,14 @@ def main() -> None:
             current_settings = get_settings()   # picks up any live web UI changes
             print_img = process_image(raw_image, current_settings)
 
+            # ── COMPOSE TICKET ────────────────────────────────────
+            ticket = compose_ticket(print_img, _build_caption(), current_settings)
+
             # ── SAVE ─────────────────────────────────────────────
-            storage.save_pair(raw_image, print_img)
+            storage.save_pair(raw_image, ticket)
 
             # ── PRINT ─────────────────────────────────────────────
-            print_image(print_img, caption=_build_caption())
+            print_ticket(ticket)
 
             # ── DONE ─────────────────────────────────────────────
             esp32.send("DONE")
