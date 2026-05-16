@@ -39,13 +39,15 @@ class ESP32:
             logger.debug("← ESP32: %s", line)
         return line or None
 
-    def wait_for_ready(self) -> None:
-        logger.info("Waiting for ESP32 READY...")
-        while True:
+    def wait_for_ready(self, timeout: float = 5.0) -> None:
+        logger.info("Waiting for ESP8266 READY (timeout=%ss)…", timeout)
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
             line = self._readline()
             if line == "READY":
-                logger.info("ESP32 ready")
+                logger.info("ESP8266 ready")
                 return
+        logger.warning("READY not received — ESP8266 already running, continuing")
 
     def wait_for_btn_press(self) -> None:
         while True:
