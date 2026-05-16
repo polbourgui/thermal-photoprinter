@@ -8,7 +8,7 @@ from PIL import Image
 logger = logging.getLogger(__name__)
 
 # Delete oldest day folders until free space is above this threshold
-_MIN_FREE_GB = 2.0
+_MIN_FREE_GB = 25.0
 
 
 class Storage:
@@ -30,10 +30,9 @@ class Storage:
         logger.info("Saved raw → %s", raw_path)
         logger.info("Saved print → %s", print_path)
 
-        self._cleanup()
         return raw_path, print_path
 
-    def _cleanup(self) -> None:
+    def cleanup(self) -> None:
         """Delete oldest day folders until free disk space exceeds _MIN_FREE_GB."""
         while True:
             free_gb = shutil.disk_usage(self.base).free / 1e9

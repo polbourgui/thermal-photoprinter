@@ -50,6 +50,19 @@ def _get_event_info() -> tuple[str, str]:
     return s.location, ""
 
 
+def _daily_cleanup(storage: Storage) -> None:
+    """Background thread: run disk cleanup once per day at midnight."""
+    while True:
+        now = time.localtime()
+        seconds_until_midnight = (
+            (23 - now.tm_hour) * 3600
+            + (59 - now.tm_min) * 60
+            + (60 - now.tm_sec)
+        )
+        time.sleep(seconds_until_midnight)
+        storage.cleanup()
+
+
 def _serial_reader(esp: ESP32) -> None:
     """Background thread: relay BTN_PRESS from ESP8266 to the shared trigger."""
     while True:
@@ -112,6 +125,8 @@ def main() -> None:
         logger.warning("Camera skipped — gray placeholder will be used")
     if args.no_printer:
         logger.warning("Printer skipped — tickets saved but not printed")
+
+    threading.Thread(target=_daily_cleanup, args=(storage,), daemon=True, name="cleanup").start()
 
     logger.info("Photobooth ready — waiting for trigger")
     trig.arm()
