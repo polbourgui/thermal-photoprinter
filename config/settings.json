@@ -22,5 +22,26 @@
   "printer": {
     "max_width": 576,
     "align": "center"
+  },
+  "hardware": {
+    "camera_device": 0,
+    "serial_port": "/dev/ttyACM0",
+    "storage_path": "/photos"
+  },
+  "shotgun": {
+    "enabled": false,
+    "organizer_id": "",
+    "refresh_interval_minutes": 30
+  },
+  "layout": {
+    "margin_top": 12,
+    "margin_bottom": 24,
+    "margin_sides": 8,
+    "header_padding": 8,
+    "footer_padding": 10,
+    "logo_font_size": 34,
+    "proof_font_size": 18,
+    "footer_font_size": 20,
+    "separator": true
   }
 }
