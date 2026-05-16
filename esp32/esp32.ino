@@ -184,7 +184,7 @@ void setup() {
 
   // WS2812B — ordre de couleur GRB (standard WS2812)
   FastLED.addLeds<WS2812B, LED_PIN, GRB>(leds, NUM_LEDS);
-  FastLED.setBrightness(255);
+  FastLED.setBrightness(15);  // ~400mA max — alimentation externe requise pour plus
   fill_solid(leds, NUM_LEDS, CRGB::Black);
   FastLED.show();
 
