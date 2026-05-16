@@ -7,5 +7,5 @@ uvicorn[standard]
 jinja2
 python-multipart
 pyserial
-opencv-python
+opencv-python-headless
 requests
