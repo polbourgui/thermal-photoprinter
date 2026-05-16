@@ -1,0 +1,17 @@
+[Unit]
+Description=Photobooth
+After=network.target
+
+[Service]
+Type=simple
+User=proof
+WorkingDirectory=/home/proof/thermal-photoprinter
+ExecStart=/home/proof/thermal-photoprinter/.venv/bin/python src/main.py
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=photobooth
+
+[Install]
+WantedBy=multi-user.target

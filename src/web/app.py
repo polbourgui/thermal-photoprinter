@@ -1,6 +1,8 @@
 from dataclasses import asdict
 from io import BytesIO
 from pathlib import Path
+import shutil
+import subprocess
 
 from fastapi import FastAPI, Form, Request
 from fastapi.responses import JSONResponse, RedirectResponse, StreamingResponse
@@ -16,6 +18,7 @@ from config import (
     get_settings,
     save_settings,
 )
+from counter import peek
 from layout import make_mockup, list_available_fonts
 import trigger as trig
 
@@ -148,3 +151,47 @@ async def virtual_trigger():
         {"status": "busy", "message": "Shot already in progress"},
         status_code=409,
     )
+
+
+@app.get("/healthz")
+async def healthz():
+    def _usb_present(vid: str, pid: str) -> bool:
+        try:
+            out = subprocess.check_output(["lsusb"], text=True)
+            return f"{vid}:{pid}" in out.lower()
+        except Exception:
+            return False
+
+    def _serial_present() -> bool:
+        return Path("/dev/ttyUSB0").exists() or Path("/dev/ttyESP8266").exists()
+
+    storage_path = Path(get_settings().hardware.storage_path)
+    disk = shutil.disk_usage(storage_path if storage_path.exists() else ".")
+
+    return JSONResponse({
+        "camera":        Path("/dev/video0").exists(),
+        "printer":       _usb_present("04b8", "0e20") or _usb_present("04b8", "0e02"),
+        "esp8266":       _serial_present(),
+        "disk_free_gb":  round(disk.free / 1e9, 1),
+        "disk_used_pct": round(disk.used / disk.total * 100),
+        "proof_count":   peek(),
+        "trigger_armed": trig._armed,
+    })
+
+
+@app.post("/api/wifi")
+async def wifi_add(ssid: str = Form(...), password: str = Form("")):
+    """Add a WiFi network to known connections (auto-connect when in range)."""
+    try:
+        subprocess.run(["nmcli", "con", "delete", ssid],
+                       capture_output=True)  # ignore if not found
+        cmd = ["nmcli", "con", "add", "type", "wifi",
+               "con-name", ssid, "ssid", ssid,
+               "connection.autoconnect", "yes"]
+        if password:
+            cmd += ["wifi-sec.key-mgmt", "wpa-psk", "wifi-sec.psk", password]
+        subprocess.run(cmd, check=True, capture_output=True)
+        return JSONResponse({"status": "ok", "message": f"Réseau \"{ssid}\" ajouté"})
+    except subprocess.CalledProcessError as e:
+        return JSONResponse({"status": "error", "message": e.stderr.decode()},
+                            status_code=500)

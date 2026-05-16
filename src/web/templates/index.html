@@ -405,6 +405,41 @@
 
     </form>
 
+    <!-- Monitoring -->
+    <div class="card mb-4">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span>État du système</span>
+        <button type="button" class="btn btn-sm btn-preview" onclick="refreshHealth()">Refresh</button>
+      </div>
+      <div class="card-body" id="health-body">
+        <div class="text-muted" style="font-size:.85rem">Chargement…</div>
+      </div>
+    </div>
+
+    <!-- WiFi -->
+    <div class="card mb-4">
+      <div class="card-header">Ajouter un réseau WiFi</div>
+      <div class="card-body">
+        <p class="text-muted mb-3" style="font-size:.8rem">
+          Ajoute le réseau du client — connexion automatique dès qu'il est détecté.
+        </p>
+        <form id="wifi-form" onsubmit="addWifi(event)">
+          <div class="row g-2 mb-2">
+            <div class="col-sm-5">
+              <input type="text" class="form-control" name="ssid" placeholder="SSID" required>
+            </div>
+            <div class="col-sm-5">
+              <input type="password" class="form-control" name="password" placeholder="Mot de passe (vide si ouvert)">
+            </div>
+            <div class="col-sm-2">
+              <button type="submit" class="btn btn-save w-100">Ajouter</button>
+            </div>
+          </div>
+        </form>
+        <div id="wifi-msg" style="font-size:.8rem; min-height:1.2em;"></div>
+      </div>
+    </div>
+
     <!-- Virtual trigger -->
     <div class="card mb-4" style="border-color:#555;">
       <div class="card-header" style="background:#2e2e2e; color:#ffc107;">Virtual trigger</div>
@@ -457,6 +492,49 @@
     document.querySelector('form').addEventListener('submit', () => {
       setTimeout(refreshMockup, 800);
     });
+
+    async function refreshHealth() {
+      const body = document.getElementById('health-body');
+      try {
+        const r = await fetch('/healthz');
+        const d = await r.json();
+        const dot = ok => ok
+          ? '<span style="color:#4ade80">●</span>'
+          : '<span style="color:#f87171">●</span>';
+        body.innerHTML = `
+          <div class="row g-2" style="font-size:.85rem">
+            <div class="col-6 col-sm-3">${dot(d.camera)} Caméra</div>
+            <div class="col-6 col-sm-3">${dot(d.printer)} Imprimante</div>
+            <div class="col-6 col-sm-3">${dot(d.esp8266)} ESP8266</div>
+            <div class="col-6 col-sm-3">${dot(d.disk_free_gb > 1)} Disque ${d.disk_free_gb} Go libres (${d.disk_used_pct}%)</div>
+          </div>
+          <div class="mt-2 text-muted" style="font-size:.75rem">
+            ${d.proof_count} photo${d.proof_count > 1 ? 's' : ''} imprimée${d.proof_count > 1 ? 's' : ''}
+            &nbsp;·&nbsp; trigger ${d.trigger_armed ? '<span style="color:#4ade80">armé</span>' : '<span style="color:#f87171">occupé</span>'}
+          </div>`;
+      } catch(e) {
+        body.innerHTML = '<span style="color:#f87171">Serveur inaccessible</span>';
+      }
+    }
+    refreshHealth();
+    setInterval(refreshHealth, 10000);
+
+    async function addWifi(e) {
+      e.preventDefault();
+      const msg = document.getElementById('wifi-msg');
+      const form = document.getElementById('wifi-form');
+      const data = new FormData(form);
+      msg.style.color = '#aaa'; msg.textContent = 'Ajout en cours…';
+      try {
+        const r = await fetch('/api/wifi', { method: 'POST', body: data });
+        const d = await r.json();
+        msg.style.color = r.ok ? '#4ade80' : '#f87171';
+        msg.textContent = d.message;
+        if (r.ok) form.reset();
+      } catch(e) {
+        msg.style.color = '#f87171'; msg.textContent = 'Erreur réseau';
+      }
+    }
 
     async function fireTrigger() {
       const btn = document.getElementById('trigger-btn');

@@ -144,6 +144,29 @@ else
     ok "FastLED already installed"
 fi
 
+# ── systemd service ───────────────────────────────────────────────────────────
+SERVICE=/etc/systemd/system/photobooth.service
+REPO_DIR="$(pwd)"
+info "Installing systemd service…"
+sudo sed "s|/home/proof/thermal-photoprinter|$REPO_DIR|g; s|User=proof|User=$USER|g" \
+    photobooth.service | sudo tee "$SERVICE" > /dev/null
+sudo systemctl daemon-reload
+sudo systemctl enable photobooth.service
+ok "Service installé et activé (démarre au boot)"
+echo "    sudo systemctl start photobooth   ← démarrer maintenant"
+echo "    sudo journalctl -u photobooth -f  ← voir les logs"
+echo ""
+
+# ── nmcli sudoers ──────────────────────────────────────────────────────────────
+SUDOERS=/etc/sudoers.d/photobooth-nmcli
+if [[ ! -f "$SUDOERS" ]]; then
+    echo "$USER ALL=(ALL) NOPASSWD: /usr/bin/nmcli" | sudo tee "$SUDOERS" > /dev/null
+    sudo chmod 440 "$SUDOERS"
+    ok "Sudoers nmcli configuré (web UI peut ajouter des réseaux WiFi)"
+else
+    ok "Sudoers nmcli déjà présent"
+fi
+
 # ── summary ───────────────────────────────────────────────────────────────────
 echo ""
 echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
