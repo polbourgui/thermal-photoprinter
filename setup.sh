@@ -123,21 +123,21 @@ export PATH="$HOME/.local/bin:$PATH"
 
 # Board manager + ESP8266 core + FastLED
 info "Configuring Arduino CLI (ESP8266 core + FastLED)…"
-arduino-cli config init --overwrite -q
+arduino-cli config init --overwrite
 arduino-cli config set board_manager.additional_urls \
-    "https://arduino.esp8266.com/stable/package_esp8266com_index.json" 2>/dev/null
-arduino-cli core update-index -q
+    "https://arduino.esp8266.com/stable/package_esp8266com_index.json"
+arduino-cli core update-index
 
 if ! arduino-cli core list | grep -q esp8266:esp8266; then
     info "Installing ESP8266 core (takes a moment)…"
-    arduino-cli core install esp8266:esp8266 -q
+    arduino-cli core install esp8266:esp8266
     ok "ESP8266 core installed"
 else
     ok "ESP8266 core already installed"
 fi
 
 if ! arduino-cli lib list | grep -q FastLED; then
-    arduino-cli lib install FastLED -q
+    arduino-cli lib install FastLED
     ok "FastLED library installed"
 else
     ok "FastLED already installed"
