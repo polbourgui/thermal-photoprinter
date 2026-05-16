@@ -1,137 +1,133 @@
-# thermal-photoprinter
+# Photobooth thermique — PROOF
 
-Turn a thermal printer into a photo printer, controllable entirely from Telegram.
-
-Originally built around IMAP email fetching — now a Telegram bot with a web UI, a full image processing pipeline, and persistent settings.
-
----
-
-## Features
-
-- **Telegram bot** — send a photo, get a preview, confirm or cancel before printing
-- **Text commands** — change any setting live via `/set`, no config file editing needed
-- **Web UI** — adjust and preview settings from a browser (FastAPI, port 8080)
-- **Image processing pipeline** — dithering, tone adjustments, gamma, vignette, grain, posterization, inversion, and more
-- **Auto-caption** — optional date/time and location printed below each photo
-- **Authorization** — restrict the bot to a list of Telegram user IDs
+Photomaton autonome : bouton physique → décompte LED → capture → impression ticket thermique.  
+Aucun écran, aucun son. Administration à distance via Tailscale.
 
 ---
 
-## How it works
+## Hardware requis
 
-```
-User sends photo on Telegram
-  → Bot downloads + processes image
-  → Bot sends preview with [✅ Print] [❌ Cancel]
-  → User confirms → ESC/POS command sent to thermal printer
-```
-
-Settings persist to `config/settings.json` and apply to all future prints.
-
----
-
-## Getting started
-
-### Requirements
-
-- Python 3.11+
-- A thermal printer with USB, compatible with python-escpos
-- A Telegram bot token ([BotFather](https://t.me/BotFather))
-
-### Installation
-
-```bash
-pip install -r requirements.txt
-cp .env.example .env
-# edit .env with your values
-python -m src.main
-```
-
-### With Docker
-
-```bash
-docker compose up
-```
-
-### Environment variables
-
-| Variable | Required | Description |
-|---|---|---|
-| `TELEGRAM_BOT_TOKEN` | Yes | Token from BotFather |
-| `TELEGRAM_ALLOWED_USER_IDS` | No | Comma-separated user IDs (empty = allow all) |
-| `PRINTER_VENDOR_ID` | Yes | USB vendor ID (hex) |
-| `PRINTER_PRODUCT_ID` | Yes | USB product ID (hex) |
-
----
-
-## Telegram commands
-
-| Command | Description |
+| Composant | Modèle testé |
 |---|---|
-| `/start` | Show help |
-| `/status` | Display all current settings |
-| `/params` | List all settable parameters with allowed values |
-| `/set <param> <value>` | Change a setting |
+| SBC | Intel NUC |
+| Webcam | USB (V4L2) |
+| Contrôleur LED + bouton | ESP8266 NodeMCU / Wemos D1 Mini |
+| Bandeau LED | WS2812B 5 V — 60 LED |
+| Imprimante | Epson TM-M30 (USB) |
 
-### `/set` parameters
+---
 
-| Parameter | Type | Range / Values |
+## Installation (NUC)
+
+```bash
+git clone <repo> && cd thermal-photoprinter
+bash setup.sh
+```
+
+Le script installe :
+- Dépendances système (`v4l-utils`, `libusb`, `python3-venv`)
+- Environnement Python + packages (`requirements.txt`)
+- Règles udev pour l'imprimante et l'ESP8266 (accès sans `sudo`)
+- Arduino CLI + core ESP8266 + bibliothèque FastLED
+
+---
+
+## Flash du firmware ESP8266
+
+```bash
+# Compiler
+arduino-cli compile --fqbn esp8266:esp8266:nodemcu esp32/
+
+# Flasher (adapter le port si nécessaire)
+arduino-cli upload --fqbn esp8266:esp8266:nodemcu --port /dev/ttyUSB0 esp32/
+```
+
+Brochage NodeMCU :
+
+| Broche | GPIO | Fonction |
 |---|---|---|
-| `dither` | choice | `bayer8x8` · `bayer4x4` · `floyd_steinberg` · `atkinson` · `threshold` |
-| `contrast` | float | 0.5 – 2.0 |
-| `brightness` | float | 0.5 – 2.0 |
-| `sharpness` | float | 0.0 – 3.0 |
-| `grayscale` | choice | `luminosity` · `average` · `red` · `green` · `blue` |
-| `gamma` | float | 0.3 – 2.5 (< 1 lightens, > 1 darkens) |
-| `threshold` | int | 0 – 255 |
-| `blur` | float | 0.0 – 5.0 |
-| `vignette` | float | 0.0 – 1.0 |
-| `grain` | float | 0.0 – 1.0 |
-| `posterize` | int | 0 (off) – 7 |
-| `invert` | bool | `on` / `off` |
-| `rotate` | bool | `on` / `off` |
-| `caption` | bool | `on` / `off` |
-| `location` | text | any text |
-| `date` | bool | `on` / `off` |
-| `align` | choice | `left` · `center` · `right` |
-| `width` | int | 1 – 832 px |
-
-Examples:
-
-```
-/set dither atkinson
-/set gamma 0.75
-/set grayscale red
-/set invert on
-/set location Paris
-```
+| D2 | 4 | DATA WS2812B |
+| D1 | 5 | LED bouton (PWM) |
+| D5 | 14 | Bouton poussoir (INPUT\_PULLUP) |
 
 ---
 
-## Project structure
+## Lancement
+
+```bash
+source .venv/bin/activate
+
+# Test sans matériel complet
+python src/main.py --no-camera --no-printer --no-esp
+
+# Test avec ESP8266 + LED, sans caméra ni imprimante
+python src/main.py --no-camera --no-printer
+
+# Production
+python src/main.py
+```
+
+Interface web (réglages layout + déclencheur virtuel) : **http://localhost:8080**
+
+---
+
+## Test du bandeau LED seul
+
+```bash
+source .venv/bin/activate
+python src/test_hardware.py --port /dev/ttyUSB0
+```
+
+Touches : `w` WAITING · `i` IDLE · `c` COUNTDOWN · `f` FLASH · `p` PRINTING · `d` DONE · `e` ERROR · `t` séquence complète
+
+---
+
+## Structure
 
 ```
+esp32/
+└── firmware.ino        # Firmware ESP8266 (FastLED, serial protocol)
 src/
-├── main.py             # Entry point — starts bot + web server concurrently
-├── config.py           # Settings dataclasses + JSON persistence
-├── image_processor.py  # Full image processing pipeline
-├── printer.py          # ESC/POS printer interface
-├── telegram_bot.py     # Telegram handlers (commands, photo, callbacks)
+├── main.py             # Boucle principale (--no-camera/printer/esp)
+├── trigger.py          # Événement partagé (bouton physique ou web)
+├── camera.py           # Capture OpenCV/V4L2
+├── esp32.py            # Communication série ESP8266
+├── image_processor.py  # Pipeline : tramage, contraste, gamma…
+├── layout.py           # Composition ticket Pillow (header + photo + footer)
+├── printer.py          # Impression ESC/POS (Epson TM-M30)
+├── storage.py          # Sauvegarde JPEG brut + PNG ticket
+├── shotgun.py          # API Shotgun.live (lieu / artistes, cache 30 min)
+├── config.py           # Dataclasses + persistence JSON
+├── counter.py          # Numéro de preuve incrémental
+├── test_hardware.py    # Test interactif LED (clavier)
 └── web/
-    ├── app.py          # FastAPI app (settings form, preview endpoint)
+    ├── app.py          # FastAPI (réglages, mockup, /trigger)
     └── templates/
-        └── index.html  # Web UI
-config/
-└── settings.json       # Persisted settings (auto-generated)
+        └── index.html
+config/                 # settings.json + counter.json (auto-générés)
+fonts/                  # Polices TTF/OTF personnalisées (optionnel)
+photos/                 # Photos brutes + tickets (YYYY-MM-DD/)
+setup.sh                # Script d'installation NUC
 ```
 
 ---
 
-## Dependencies
+## Variables d'environnement
 
-- [python-telegram-bot](https://github.com/python-telegram-bot/python-telegram-bot) 20.x
-- [Pillow](https://python-pillow.org/) ≥ 10.0
-- [numpy](https://numpy.org/)
-- [python-escpos](https://github.com/python-escpos/python-escpos) ≥ 3.0
-- [FastAPI](https://fastapi.tiangolo.com/) + [uvicorn](https://www.uvicorn.org/)
-- [python-dotenv](https://github.com/theskumar/python-dotenv)
+| Variable | Défaut | Description |
+|---|---|---|
+| `WEB_PORT` | `8080` | Port de l'interface web |
+| `CONFIG_PATH` | `config/settings.json` | Chemin du fichier de config |
+| `SHOTGUN_API_TOKEN` | — | Token API Shotgun.live (optionnel) |
+
+Créées dans `.env` par `setup.sh`.
+
+---
+
+## Protocole série ESP8266 ↔ NUC
+
+| Direction | Message | Déclencheur |
+|---|---|---|
+| NUC → ESP | `IDLE` `COUNTDOWN` `FLASH` `PRINTING` `DONE` `ERROR` | État courant |
+| ESP → NUC | `BTN_PRESS` `BTN_RELEASE` | Bouton physique |
+| ESP → NUC | `READY` | Au démarrage |
