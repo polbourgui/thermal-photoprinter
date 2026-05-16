@@ -5,11 +5,11 @@
 #include <FastLED.h>
 
 // ─── pins (NodeMCU labels) ───────────────────────────────────────────────────
-//  D2 = GPIO4  → WS2812B DATA
-//  D1 = GPIO5  → LED bouton (PWM)
+//  D1 = GPIO5  → WS2812B DATA
+//  D6 = GPIO12 → LED bouton (PWM)
 //  D5 = GPIO14 → Bouton poussoir (INPUT_PULLUP)
-#define LED_PIN      4   // D2
-#define BTN_LED_PIN  5   // D1
+#define LED_PIN      5   // D1
+#define BTN_LED_PIN  12  // D6
 #define BTN_PIN      14  // D5
 
 #define NUM_LEDS     60
