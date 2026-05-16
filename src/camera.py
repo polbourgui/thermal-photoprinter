@@ -44,7 +44,8 @@ class Camera:
         ret, frame = self._cap.read()
         if not ret:
             raise RuntimeError("Camera capture failed")
-        return Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+        img = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+        return img.rotate(90, expand=True)  # landscape → portrait
 
     def close(self) -> None:
         if self._cap:

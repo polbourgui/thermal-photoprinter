@@ -47,7 +47,7 @@ class LayoutSettings:
     logo_font_size: int = 34       # "PROOF" logotype
     proof_font_size: int = 18      # "preuve n° XXX"
     footer_font_size: int = 20     # venue / artist / date / time
-    separator: bool = True         # lines between header, photo, footer
+    separator: bool = False        # lines between header, photo, footer
     font_logo: str = ""            # filename in fonts/ dir (empty = system default)
     font_body: str = ""            # filename in fonts/ dir (empty = system default)
 
