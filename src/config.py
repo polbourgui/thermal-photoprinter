@@ -39,13 +39,15 @@ class PrinterSettings:
 
 @dataclass
 class LayoutSettings:
-    margin_top: int = 10           # px above first element
-    margin_bottom: int = 20        # px below last element
-    margin_sides: int = 0          # px left and right
-    caption_position: str = "bottom"  # "top" | "bottom" | "none"
-    caption_font_size: int = 22
-    caption_padding: int = 14      # px between photo and caption text
-    separator: bool = False        # thin line between photo and caption
+    margin_top: int = 12
+    margin_bottom: int = 24
+    margin_sides: int = 8
+    header_padding: int = 8        # px between header and photo
+    footer_padding: int = 10       # px between photo and footer
+    logo_font_size: int = 34       # "PROOF" logotype
+    proof_font_size: int = 18      # "preuve n° XXX"
+    footer_font_size: int = 20     # venue / artist / date / time
+    separator: bool = True         # lines between header, photo, footer
 
 
 @dataclass

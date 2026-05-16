@@ -290,17 +290,17 @@
 
           <div class="row g-3 mb-3">
             <div class="col-sm-4">
-              <label class="form-label" for="margin_top">Margin top (px)</label>
+              <label class="form-label" for="margin_top">Marge haut (px)</label>
               <input type="number" class="form-control" name="margin_top" id="margin_top"
                 min="0" max="200" value="{{ s.layout.margin_top }}">
             </div>
             <div class="col-sm-4">
-              <label class="form-label" for="margin_bottom">Margin bottom (px)</label>
+              <label class="form-label" for="margin_bottom">Marge bas (px)</label>
               <input type="number" class="form-control" name="margin_bottom" id="margin_bottom"
                 min="0" max="200" value="{{ s.layout.margin_bottom }}">
             </div>
             <div class="col-sm-4">
-              <label class="form-label" for="margin_sides">Margin sides (px)</label>
+              <label class="form-label" for="margin_sides">Marge côtés (px)</label>
               <input type="number" class="form-control" name="margin_sides" id="margin_sides"
                 min="0" max="100" value="{{ s.layout.margin_sides }}">
             </div>
@@ -308,44 +308,64 @@
 
           <div class="row g-3 mb-3">
             <div class="col-sm-6">
-              <label class="form-label" for="caption_position">Caption position</label>
-              <select class="form-select" name="caption_position" id="caption_position">
-                {% for v, l in [("bottom","Below photo"),("top","Above photo"),("none","Hidden")] %}
-                <option value="{{ v }}" {% if s.layout.caption_position == v %}selected{% endif %}>{{ l }}</option>
-                {% endfor %}
-              </select>
+              <label class="form-label d-flex justify-content-between">
+                Taille logo PROOF
+                <span class="value-display" id="logo-size-val">{{ s.layout.logo_font_size }}</span>
+              </label>
+              <input type="range" class="form-range" name="logo_font_size" id="logo_font_size"
+                min="16" max="72" step="1" value="{{ s.layout.logo_font_size }}"
+                oninput="document.getElementById('logo-size-val').textContent = this.value">
+              <div class="d-flex justify-content-between" style="font-size:.7rem;color:#555">
+                <span>16</span><span>34</span><span>72</span>
+              </div>
             </div>
             <div class="col-sm-6">
               <label class="form-label d-flex justify-content-between">
-                Caption font size
-                <span class="value-display" id="font-size-val">{{ s.layout.caption_font_size }}</span>
+                Taille numéro de preuve
+                <span class="value-display" id="proof-size-val">{{ s.layout.proof_font_size }}</span>
               </label>
-              <input type="range" class="form-range" name="caption_font_size" id="caption_font_size"
-                min="10" max="60" step="1"
-                value="{{ s.layout.caption_font_size }}"
-                oninput="document.getElementById('font-size-val').textContent = this.value">
-              <div class="d-flex justify-content-between" style="font-size:.7rem;color:#555">
-                <span>10</span><span>22</span><span>60</span>
-              </div>
+              <input type="range" class="form-range" name="proof_font_size" id="proof_font_size"
+                min="10" max="40" step="1" value="{{ s.layout.proof_font_size }}"
+                oninput="document.getElementById('proof-size-val').textContent = this.value">
             </div>
           </div>
 
           <div class="row g-3 mb-3">
             <div class="col-sm-6">
               <label class="form-label d-flex justify-content-between">
-                Padding photo ↔ caption (px)
-                <span class="value-display" id="padding-val">{{ s.layout.caption_padding }}</span>
+                Taille footer (lieu / artiste / date)
+                <span class="value-display" id="footer-size-val">{{ s.layout.footer_font_size }}</span>
               </label>
-              <input type="range" class="form-range" name="caption_padding" id="caption_padding"
-                min="0" max="60" step="2"
-                value="{{ s.layout.caption_padding }}"
-                oninput="document.getElementById('padding-val').textContent = this.value">
+              <input type="range" class="form-range" name="footer_font_size" id="footer_font_size"
+                min="10" max="40" step="1" value="{{ s.layout.footer_font_size }}"
+                oninput="document.getElementById('footer-size-val').textContent = this.value">
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label d-flex justify-content-between">
+                Espace header ↔ photo (px)
+                <span class="value-display" id="hpad-val">{{ s.layout.header_padding }}</span>
+              </label>
+              <input type="range" class="form-range" name="header_padding"
+                min="0" max="40" step="2" value="{{ s.layout.header_padding }}"
+                oninput="document.getElementById('hpad-val').textContent = this.value">
+            </div>
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-sm-6">
+              <label class="form-label d-flex justify-content-between">
+                Espace photo ↔ footer (px)
+                <span class="value-display" id="fpad-val">{{ s.layout.footer_padding }}</span>
+              </label>
+              <input type="range" class="form-range" name="footer_padding"
+                min="0" max="40" step="2" value="{{ s.layout.footer_padding }}"
+                oninput="document.getElementById('fpad-val').textContent = this.value">
             </div>
             <div class="col-sm-6 d-flex align-items-end pb-1">
               <div class="form-check form-switch">
                 <input class="form-check-input" type="checkbox" name="separator" id="separator" value="on"
                   {% if s.layout.separator %}checked{% endif %}>
-                <label class="form-check-label" for="separator">Separator line</label>
+                <label class="form-check-label" for="separator">Lignes séparatrices</label>
               </div>
             </div>
           </div>

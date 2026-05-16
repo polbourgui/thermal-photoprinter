@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 
 from camera import Camera
 from config import load_settings, get_settings
+from counter import next_proof_number
 from esp32 import ESP32
 from image_processor import process_image
 from layout import compose_ticket
@@ -35,27 +36,16 @@ def _run_web() -> None:
 _shotgun: ShotgunClient | None = None
 
 
-def _build_caption() -> str | None:
-    s = get_settings().caption
-    if not s.enabled:
-        return None
-
-    parts = []
-
-    # Shotgun event info takes priority over manual location
+def _get_event_info() -> tuple[str, str]:
+    """Return (venue, artists) from Shotgun if active, else from manual settings."""
     if _shotgun is not None:
         event = _shotgun.get_current_event()
         if event:
-            parts.append(event.name)
-            if event.headliner():
-                parts.append(event.headliner())
-    elif s.location:
-        parts.append(s.location)
+            artists = "  •  ".join(event.artists[:2]) if event.artists else ""
+            return event.venue_name, artists
 
-    if s.show_date:
-        parts.append(datetime.now().strftime("%d/%m/%Y %H:%M"))
-
-    return "  •  ".join(parts) if parts else None
+    s = get_settings().caption
+    return s.location, ""
 
 
 def main() -> None:
@@ -108,7 +98,11 @@ def main() -> None:
             print_img = process_image(raw_image, current_settings)
 
             # ── COMPOSE TICKET ────────────────────────────────────
-            ticket = compose_ticket(print_img, _build_caption(), current_settings)
+            venue, artists  = _get_event_info()
+            proof_number    = next_proof_number()
+            ticket = compose_ticket(
+                print_img, venue, artists, proof_number, datetime.now(), current_settings
+            )
 
             # ── SAVE ─────────────────────────────────────────────
             storage.save_pair(raw_image, ticket)
