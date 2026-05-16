@@ -112,8 +112,9 @@ ARDUINO_BIN="$HOME/.local/bin/arduino-cli"
 if [[ ! -x "$ARDUINO_BIN" ]]; then
     info "Installing Arduino CLI…"
     mkdir -p "$HOME/.local/bin"
+    # BINDIR env var sets the install destination (--bindir flag breaks the URL)
     curl -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh \
-        | sh -s -- --bindir "$HOME/.local/bin" 2>/dev/null
+        | BINDIR="$HOME/.local/bin" sh
     ok "Arduino CLI installed → $ARDUINO_BIN"
 else
     ok "Arduino CLI already installed"
