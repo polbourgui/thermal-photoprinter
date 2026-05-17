@@ -193,15 +193,13 @@ async def healthz():
 
 @app.post("/api/print-flyer")
 async def print_flyer():
-    """Render assets/flyer.html and send it to the thermal printer."""
+    """Render the PROOF flyer with Pillow and send it to the thermal printer."""
     try:
         from flyer import render_flyer
         from printer import print_ticket
         img = render_flyer(print_width=get_settings().printer.max_width)
         print_ticket(img)
         return JSONResponse({"status": "ok", "message": "Flyer envoyé à l'imprimante"})
-    except RuntimeError as exc:
-        return JSONResponse({"status": "error", "message": str(exc)}, status_code=503)
     except Exception as exc:
         return JSONResponse({"status": "error", "message": str(exc)}, status_code=500)
 
