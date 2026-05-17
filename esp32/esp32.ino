@@ -102,7 +102,7 @@ void computeFlash(CRGB* out) {
 
 void computePrinting(CRGB* out) {
   // 250 ms per step → ~3.75 s per full rotation on a 15-LED ring.
-  uint8_t pos = (millis() / 250) % gNumLeds;
+  uint8_t pos = (millis() / 120) % gNumLeds;
   for (int i = 0; i < gNumLeds; i++) {
     int trail = (i - pos + gNumLeds) % gNumLeds; // distance derrière la tête
     int lead  = (pos - i + gNumLeds) % gNumLeds; // distance devant la tête
