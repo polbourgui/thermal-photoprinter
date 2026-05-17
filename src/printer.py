@@ -62,13 +62,14 @@ def _get_printer() -> _UsbPrinter:
     if dev is None:
         raise RuntimeError(f"Printer {vendor_id:04x}:{product_id:04x} not found")
 
-    # Enable auto-detach so claim_interface() handles any last-moment re-attach.
+    # Enable auto-detach: claim_interface() will atomically detach any kernel
+    # driver (usblp) without a race window.
     try:
         dev.set_auto_detach_kernel_driver(True)
     except Exception:
         pass
 
-    # Manually detach from all interfaces (belt-and-suspenders with auto-detach).
+    # Manual pre-detach as belt-and-suspenders.
     for n in range(5):
         try:
             if dev.is_kernel_driver_active(n):
@@ -77,26 +78,20 @@ def _get_printer() -> _UsbPrinter:
         except Exception as exc:
             logger.debug("Interface %d: %s", n, exc)
 
-    # set_configuration() is typically a no-op (device already in config 1).
-    # On Linux, libusb short-circuits same-config requests without a kernel ioctl,
-    # so EBUSY cannot occur here.  We still retry once defensively.
-    for attempt in range(2):
-        try:
-            dev.set_configuration()
-            break
-        except usb.core.USBError as exc:
-            if exc.errno == 16 and attempt == 0:
-                for n in range(5):
-                    try:
-                        if dev.is_kernel_driver_active(n):
-                            dev.detach_kernel_driver(n)
-                    except Exception:
-                        pass
-            else:
-                raise
+    # set_configuration() fails with EBUSY when usblp or another driver still
+    # holds the device — but the device is already in config 1, so we can skip
+    # it safely.  claim_interface() below is what actually matters.
+    try:
+        dev.set_configuration()
+    except usb.core.USBError as exc:
+        if exc.errno == 16:
+            logger.debug("set_configuration EBUSY — device already configured, skipping")
+        else:
+            raise
 
-    # Claim interface 0 — while we hold the claim, the kernel driver cannot
-    # re-attach.  set_auto_detach_kernel_driver handles any race at this point.
+    # Claim interface 0.  With auto_detach this atomically removes usblp if it
+    # re-attached between the manual detach and this call.  While the claim is
+    # held, no kernel driver can re-attach — the race window is closed.
     usb.util.claim_interface(dev, 0)
 
     # Discover bulk endpoints on interface (0, alt-setting 0).
