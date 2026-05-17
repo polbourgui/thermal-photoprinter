@@ -57,8 +57,8 @@ void setState(State newState) {
   if (newState == state) return;
   memcpy(fromLeds, leds, sizeof(leds));
   transitionStart = millis();
-  // FLASH must be instantaneous — a cross-fade defeats the purpose of a strobe.
-  inTransition = (newState != STATE_FLASH);
+  // FLASH and DONE are instantaneous — a cross-fade defeats their visual intent.
+  inTransition = (newState != STATE_FLASH && newState != STATE_DONE);
   state        = newState;
   stateStart   = millis();
 }
@@ -110,11 +110,10 @@ void computePrinting(CRGB* out) {
 }
 
 void computeDone(CRGB* out) {
+  // Single flash: instant full green, linear fade to black over 700ms, then IDLE.
   unsigned long t = millis() - stateStart;
-  if (t < 300) {
-    fill_solid(out, gNumLeds, CRGB::Green);
-  } else if (t < 700) {
-    uint8_t b = (uint8_t)map(t, 300, 700, 255, 0);
+  if (t < 700) {
+    uint8_t b = (uint8_t)map(t, 0, 700, 220, 0);
     fill_solid(out, gNumLeds, CRGB(0, b, 0));
   } else {
     setState(STATE_IDLE);
