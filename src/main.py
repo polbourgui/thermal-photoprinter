@@ -56,11 +56,14 @@ def _get_event_info() -> tuple[str, str]:
 def _printer_monitor(esp: ESP32) -> None:
     """
     Background thread: poll printer sensors every 5s.
-    Sends ERROR to ESP8266 on paper end, cover open, jam or fatal error.
-    Sends IDLE when resolved (only if no shot in progress).
+    Requires 3 consecutive error reads before triggering ERROR (debounce).
+    Clears immediately on a clean read.
     """
     from printer import get_status
-    in_error = False
+    in_error      = False
+    error_streak  = 0
+    DEBOUNCE      = 3
+
     while True:
         time.sleep(5)
         try:
@@ -70,20 +73,23 @@ def _printer_monitor(esp: ESP32) -> None:
                 or s.get("cover_open")
                 or s.get("error_fatal")
                 or s.get("error_recover")
-                or s.get("paper_jam")
                 or not s.get("ok", True)
             )
-            if printer_error and not in_error:
-                in_error = True
-                logger.warning("Printer error detected: %s", s)
-                esp.send("ERROR")
-            elif not printer_error and in_error:
-                in_error = False
-                logger.info("Printer error cleared")
-                if trig._armed:
-                    esp.send("IDLE")
+            if printer_error:
+                error_streak += 1
+                if error_streak >= DEBOUNCE and not in_error:
+                    in_error = True
+                    logger.warning("Printer error confirmed: %s", s)
+                    esp.send("ERROR")
+            else:
+                error_streak = 0
+                if in_error:
+                    in_error = False
+                    logger.info("Printer error cleared")
+                    if trig._armed:
+                        esp.send("IDLE")
         except Exception:
-            pass  # ESP may be unavailable briefly
+            pass
 
 
 def _daily_cleanup(storage: Storage) -> None:
