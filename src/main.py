@@ -213,6 +213,7 @@ def main() -> None:
             # ── PROCESS ──────────────────────────────────────────
             if esp:
                 esp.send("PRINTING")
+            _t_printing = time.monotonic()
             current_settings = get_settings()
             print_img = process_image(raw_image, current_settings)
 
@@ -228,13 +229,12 @@ def main() -> None:
 
             # ── PRINT ─────────────────────────────────────────────
             if not args.no_printer:
-                _t0 = time.monotonic()
                 print_ticket(ticket)
-                logger.info("PRINT_DURATION %.2fs", time.monotonic() - _t0)
             else:
                 logger.info("Print skipped (--no-printer)")
 
             # ── DONE ─────────────────────────────────────────────
+            logger.info("PRINTING_CYCLE %.2fs", time.monotonic() - _t_printing)
             if esp:
                 esp.send("DONE")
             time.sleep(1.5)
