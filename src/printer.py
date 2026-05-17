@@ -70,7 +70,7 @@ def print_ticket(ticket: Image.Image) -> None:
     p = _get_printer()
     try:
         p.set(align=settings.printer.align)
-        p.image(ticket)
+        p.image(ticket.rotate(180))
         p.cut()
         logger.info("Printed ticket (%dx%d px)", ticket.width, ticket.height)
     finally:
