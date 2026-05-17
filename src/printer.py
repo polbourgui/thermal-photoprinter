@@ -20,8 +20,13 @@ except ImportError:
 class _UsbPrinter(_EscposBase):
     """ESC/POS over a pyusb device handle we opened and claimed ourselves."""
 
+    def open(self) -> None:
+        # escpos >= 3.1: Escpos.__init__ calls self.open().  We suppress it
+        # here; our device is injected after super().__init__() returns.
+        pass
+
     def __init__(self, dev, in_ep: int, out_ep: int, profile: str = "default"):
-        super().__init__(profile=profile)
+        super().__init__(profile=profile)  # calls self.open() → pass
         self.device = dev
         self.in_ep  = in_ep
         self.out_ep = out_ep
