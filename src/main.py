@@ -227,7 +227,9 @@ def main() -> None:
 
             # ── PRINT ─────────────────────────────────────────────
             if not args.no_printer:
+                _t0 = time.monotonic()
                 print_ticket(ticket)
+                logger.info("PRINT_DURATION %.2fs", time.monotonic() - _t0)
             else:
                 logger.info("Print skipped (--no-printer)")
 
