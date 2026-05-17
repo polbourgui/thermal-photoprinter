@@ -50,6 +50,39 @@ def _get_event_info() -> tuple[str, str]:
     return s.location, ""
 
 
+def _printer_monitor(esp: ESP32) -> None:
+    """
+    Background thread: poll printer sensors every 5s.
+    Sends ERROR to ESP8266 on paper end, cover open, jam or fatal error.
+    Sends IDLE when resolved (only if no shot in progress).
+    """
+    from printer import get_status
+    in_error = False
+    while True:
+        time.sleep(5)
+        try:
+            s = get_status()
+            printer_error = (
+                s.get("paper_end")
+                or s.get("cover_open")
+                or s.get("error_fatal")
+                or s.get("error_recover")
+                or s.get("paper_jam")
+                or not s.get("ok", True)
+            )
+            if printer_error and not in_error:
+                in_error = True
+                logger.warning("Printer error detected: %s", s)
+                esp.send("ERROR")
+            elif not printer_error and in_error:
+                in_error = False
+                logger.info("Printer error cleared")
+                if trig._armed:
+                    esp.send("IDLE")
+        except Exception:
+            pass  # ESP may be unavailable briefly
+
+
 def _daily_cleanup(storage: Storage) -> None:
     """Background thread: run disk cleanup once per day at midnight."""
     while True:
@@ -127,6 +160,8 @@ def main() -> None:
         logger.warning("Printer skipped — tickets saved but not printed")
 
     threading.Thread(target=_daily_cleanup, args=(storage,), daemon=True, name="cleanup").start()
+    if esp and not args.no_printer:
+        threading.Thread(target=_printer_monitor, args=(esp,), daemon=True, name="printer-monitor").start()
 
     logger.info("Photobooth ready — waiting for trigger")
     trig.arm()
