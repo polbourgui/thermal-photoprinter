@@ -64,7 +64,7 @@ class HardwareSettings:
     camera_device: int = 0
     serial_port: str = "/dev/ttyUSB0"
     storage_path: str = "photos"
-    num_leds: int = 111
+    num_leds: int = 15
 
 
 @dataclass

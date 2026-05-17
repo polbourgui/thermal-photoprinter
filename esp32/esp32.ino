@@ -12,7 +12,7 @@
 #define BTN_LED_PIN  12  // D6
 #define BTN_PIN      14  // D5
 
-#define NUM_LEDS     500   // array upper bound — actual count set at runtime
+#define NUM_LEDS     45    // array upper bound — actual count set at runtime
 #define BAUD_RATE    115200
 #define DEBOUNCE_MS  50
 #define FLASH_MS     300
@@ -36,7 +36,7 @@ enum State {
   STATE_ERROR
 };
 
-uint16_t      gNumLeds        = 111;   // updated at runtime via LEDS:n
+uint16_t      gNumLeds        = 15;    // updated at runtime via LEDS:n
 State         state           = STATE_WAITING;
 unsigned long stateStart      = 0;
 unsigned long transitionStart = 0;
@@ -197,7 +197,7 @@ void setup() {
 
   // WS2812B — ordre de couleur GRB (standard WS2812)
   FastLED.addLeds<WS2812B, LED_PIN, GRB>(leds, NUM_LEDS);
-  FastLED.setBrightness(17);  // safe default for 111 LEDs on USB — overridden by BRIGHT:n
+  FastLED.setBrightness(255); // safe default for 15 LEDs on USB — overridden by BRIGHT:n
   fill_solid(leds, NUM_LEDS, CRGB::Black);
   FastLED.show();
 

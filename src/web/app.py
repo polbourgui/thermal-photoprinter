@@ -76,7 +76,7 @@ async def update_settings(
     footer_font_size: int = Form(20),
     separator: str = Form("off"),
     # Hardware
-    num_leds: int = Form(111),
+    num_leds: int = Form(15),
 ):
     hw = get_settings().hardware  # preserve fields not exposed in the form
     settings = Settings(
@@ -121,7 +121,7 @@ async def update_settings(
             camera_device=hw.camera_device,
             serial_port=hw.serial_port,
             storage_path=hw.storage_path,
-            num_leds=max(1, min(500, num_leds)),
+            num_leds=max(1, min(45, num_leds)),
         ),
     )
     save_settings(settings)
