@@ -101,11 +101,20 @@ void computeFlash(CRGB* out) {
 }
 
 void computePrinting(CRGB* out) {
-  // 500 ms per step → ~7.5 s per full rotation on a 15-LED ring.
-  uint8_t pos = (millis() / 500) % gNumLeds;
+  // 250 ms per step → ~3.75 s per full rotation on a 15-LED ring.
+  uint8_t pos = (millis() / 250) % gNumLeds;
   for (int i = 0; i < gNumLeds; i++) {
-    int     dist = (i - pos + gNumLeds) % gNumLeds;
-    uint8_t b    = (dist < 4) ? (uint8_t)(255 - dist * 64) : 0;
+    int trail = (i - pos + gNumLeds) % gNumLeds; // distance derrière la tête
+    int lead  = (pos - i + gNumLeds) % gNumLeds; // distance devant la tête
+    uint8_t b = 0;
+    // Queue — falloff exponentiel doux
+    if      (trail == 0) b = 220;
+    else if (trail == 1) b = 130;
+    else if (trail == 2) b = 65;
+    else if (trail == 3) b = 28;
+    else if (trail == 4) b = 8;
+    // Halo avant — anticipe la tête, casse le bord franc
+    if (lead == 1) b = max(b, (uint8_t)30);
     out[i] = CRGB(0, b, 0);
   }
 }
