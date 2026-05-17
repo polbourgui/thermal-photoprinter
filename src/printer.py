@@ -24,11 +24,17 @@ def get_status() -> dict:
     try:
         p = _get_printer()
         try:
+            # Flush any stale data in the USB IN buffer
+            try:
+                p.device.read(p.in_ep, 64, timeout=100)
+            except Exception:
+                pass
+
             results = []
             for n in (1, 2, 3, 4):          # printer / offline / error / paper
                 p._raw(bytes([0x10, 0x04, n]))
                 time.sleep(0.05)
-                data = p.device.read(p.in_ep, 1, timeout=300)
+                data = p.device.read(p.in_ep, 16, timeout=300)
                 results.append(data[0] if data else 0)
         finally:
             p.close()

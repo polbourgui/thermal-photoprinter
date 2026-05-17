@@ -27,6 +27,9 @@ logging.basicConfig(
     format="%(asctime)s %(name)-20s %(levelname)-8s %(message)s",
     stream=sys.stdout,
 )
+# Suppress verbose internal messages from python-escpos
+logging.getLogger("root").setLevel(logging.WARNING)
+logging.getLogger("escpos").setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 
 
