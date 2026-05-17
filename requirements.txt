@@ -10,3 +10,4 @@ python-multipart
 pyserial
 opencv-python-headless
 requests
+playwright

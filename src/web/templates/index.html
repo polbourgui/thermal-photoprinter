@@ -485,6 +485,25 @@
       </div>
     </div>
 
+    <!-- Print flyer -->
+    <div class="card mb-4" style="border-color:#555;">
+      <div class="card-header" style="background:#2e2e2e; color:#aaa;">Imprimer le flyer</div>
+      <div class="card-body text-center py-4">
+        <p class="text-muted mb-3" style="font-size:.85rem">
+          Imprime le flyer PROOF (format 80mm) sur le rouleau thermique.<br>
+          Requiert <code>playwright</code> installé sur le NUC.
+        </p>
+        <button id="flyer-btn" type="button"
+          onclick="printFlyer()"
+          style="font-size:1rem; font-weight:700; padding:.5rem 2rem;
+                 background:#2e2e2e; border:1px solid #666; border-radius:6px; color:#e0e0e0;
+                 cursor:pointer; letter-spacing:.05em; text-transform:uppercase;">
+          ⬛ Imprimer le flyer
+        </button>
+        <div id="flyer-msg" class="mt-2" style="font-size:.8rem; min-height:1.2em;"></div>
+      </div>
+    </div>
+
     <!-- Ticket mockup -->
     <div class="card mb-4">
       <div class="card-header d-flex justify-content-between align-items-center">
@@ -585,6 +604,25 @@
         if (r.ok) form.reset();
       } catch(e) {
         msg.style.color = '#f87171'; msg.textContent = 'Erreur réseau';
+      }
+    }
+
+    async function printFlyer() {
+      const btn = document.getElementById('flyer-btn');
+      const msg = document.getElementById('flyer-msg');
+      btn.disabled = true;
+      btn.textContent = '⏳ Rendu en cours…';
+      msg.style.color = '#aaa'; msg.textContent = '';
+      try {
+        const r = await fetch('/api/print-flyer', { method: 'POST' });
+        const d = await r.json();
+        msg.style.color = r.ok ? '#4ade80' : '#f87171';
+        msg.textContent = d.message;
+      } catch(e) {
+        msg.style.color = '#f87171'; msg.textContent = 'Erreur réseau';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '⬛ Imprimer le flyer';
       }
     }
 

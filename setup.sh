@@ -54,6 +54,11 @@ info "Installing Python dependencies…"
 pip install -r requirements.txt -q
 ok "Python dependencies installed"
 
+# ── Playwright / Chromium (for flyer rendering) ───────────────────────────────
+info "Installing Playwright Chromium browser…"
+playwright install --with-deps chromium
+ok "Playwright Chromium installed"
+
 # ── directories ───────────────────────────────────────────────────────────────
 for d in config photos fonts; do
     mkdir -p "$d"

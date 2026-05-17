@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PROOF — Flyer Thermique 80mm</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/barlow-condensed@5/700.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/courier-prime@5/400.css">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #888;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    min-height: 100vh;
+    padding: 40px 20px;
+    gap: 16px;
+    font-family: 'Courier Prime', monospace;
+  }
+
+  .meta {
+    font-family: 'Courier Prime', monospace;
+    font-size: 11px;
+    color: rgba(255,255,255,0.6);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    text-align: center;
+  }
+
+  /* ── THERMAL RECEIPT FRAME ── */
+  /* 80mm paper at 4× screen scale = 302px × 4 ≈ 320px */
+  /* Actual print: designed for 72mm printable width on Epson TM-M30 */
+  .receipt {
+    width: 320px;
+    background: #FAFAF8;
+    position: relative;
+    /* Simulate torn thermal paper edges */
+    filter: drop-shadow(0 2px 12px rgba(0,0,0,0.35));
+  }
+
+  /* Top tear */
+  .tear-top {
+    width: 100%;
+    height: 10px;
+    background: #FAFAF8;
+    clip-path: polygon(
+      0% 100%, 2% 40%, 4% 90%, 6% 30%, 8% 80%, 10% 20%,
+      12% 70%, 14% 10%, 16% 60%, 18% 0%, 20% 50%,
+      22% 100%, 24% 40%, 26% 90%, 28% 20%, 30% 70%,
+      32% 10%, 34% 60%, 36% 0%, 38% 50%, 40% 100%,
+      42% 30%, 44% 80%, 46% 20%, 48% 70%, 50% 5%,
+      52% 55%, 54% 100%, 56% 35%, 58% 85%, 60% 15%,
+      62% 65%, 64% 5%, 66% 55%, 68% 100%, 70% 40%,
+      72% 90%, 74% 25%, 76% 75%, 78% 10%, 80% 60%,
+      82% 0%, 84% 50%, 86% 100%, 88% 30%, 90% 80%,
+      92% 20%, 94% 70%, 96% 10%, 98% 60%, 100% 0%, 100% 100%
+    );
+  }
+
+  .content {
+    padding: 0 20px 24px;
+    background: #FAFAF8;
+  }
+
+  /* ── PHOTO AREA ── */
+  .photo-zone {
+    width: 280px;
+    margin: 0 0 0px 0;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* ── STAMP ── */
+  .stamp-block {
+    padding: 16px 0 14px;
+    border-bottom: 0.5px solid #000;
+    margin-bottom: 14px;
+  }
+
+  .stamp {
+    display: inline-flex;
+    border: 2.5px solid #000;
+    padding: 6px 20px 5px;
+  }
+
+  .stamp span {
+    font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+    font-weight: 700;
+    font-size: 36px;
+    letter-spacing: 0.32em;
+    padding-right: 0.32em;
+    line-height: 1;
+    color: #000;
+  }
+
+  /* ── TAGLINE ── */
+  .tagline {
+    font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+    font-weight: 700;
+    font-size: 22px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: #000;
+    line-height: 1.1;
+    margin-bottom: 14px;
+  }
+
+  .tagline-sub {
+    font-family: 'Courier Prime', monospace;
+    font-size: 9.5px;
+    color: #000;
+    line-height: 1.7;
+    margin-bottom: 14px;
+    opacity: 0.65;
+  }
+
+  /* ── RULE ── */
+  .rule-solid { width: 100%; height: 0.5px; background: #000; opacity: 0.15; margin: 12px 0; }
+  .rule-dashed { border: none; border-top: 0.5px dashed rgba(0,0,0,0.2); margin: 12px 0; width: 100%; }
+
+  /* ── PROPS ── */
+  .props { margin-bottom: 14px; }
+
+  .prop {
+    font-family: 'Courier Prime', monospace;
+    font-size: 9px;
+    color: #000;
+    letter-spacing: 0.04em;
+    line-height: 1.9;
+    display: flex;
+    gap: 8px;
+    align-items: baseline;
+  }
+
+  .prop::before {
+    content: '–';
+    opacity: 0.3;
+    flex-shrink: 0;
+  }
+
+  /* ── FOOTER ── */
+  .footer {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-top: 4px;
+  }
+
+  .footer-line {
+    font-family: 'Courier Prime', monospace;
+    font-size: 9px;
+    color: #000;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    opacity: 0.4;
+  }
+
+  .footer-url {
+    font-family: 'Courier Prime', monospace;
+    font-size: 10px;
+    color: #000;
+    letter-spacing: 0.06em;
+    opacity: 0.75;
+    margin-top: 3px;
+  }
+
+  /* Proof number bottom right */
+  .proof-ref {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-top: 16px;
+    padding-top: 10px;
+    border-top: 0.5px solid rgba(0,0,0,0.12);
+  }
+
+  .proof-ref-left {
+    font-family: 'Courier Prime', monospace;
+    font-size: 8px;
+    color: #000;
+    opacity: 0.3;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    line-height: 1.6;
+  }
+
+  /* Small stamp as signature */
+  .sig-small {
+    display: inline-flex;
+    border: 1px solid rgba(0,0,0,0.3);
+    padding: 3px 10px 2px;
+  }
+
+  .sig-small span {
+    font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 0.22em;
+    padding-right: 0.22em;
+    line-height: 1;
+    color: rgba(0,0,0,0.3);
+  }
+
+  /* Bottom tear */
+  .tear-bottom {
+    width: 100%;
+    height: 10px;
+    background: #FAFAF8;
+    clip-path: polygon(
+      0% 0%, 2% 60%, 4% 10%, 6% 70%, 8% 20%, 10% 80%,
+      12% 30%, 14% 90%, 16% 40%, 18% 100%, 20% 50%,
+      22% 0%, 24% 60%, 26% 10%, 28% 80%, 30% 30%,
+      32% 90%, 34% 40%, 36% 100%, 38% 50%, 40% 0%,
+      42% 70%, 44% 20%, 46% 80%, 48% 30%, 50% 95%,
+      52% 45%, 54% 0%, 56% 65%, 58% 15%, 60% 85%,
+      62% 35%, 64% 95%, 66% 45%, 68% 0%, 70% 60%,
+      72% 10%, 74% 75%, 76% 25%, 78% 90%, 80% 40%,
+      82% 100%, 84% 50%, 86% 0%, 88% 70%, 90% 20%,
+      92% 80%, 94% 30%, 96% 90%, 98% 40%, 100% 100%, 0% 100%
+    );
+  }
+
+  /* Print reset */
+  @media print {
+    body { background: white; padding: 0; }
+    .meta { display: none; }
+    .receipt { filter: none; }
+    .tear-top, .tear-bottom { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="meta">Format 80mm · Imprimante thermique · Noir seul</div>
+
+<div class="receipt">
+
+  <div class="tear-top"></div>
+
+  <!-- PHOTO AREA — dithered silhouette, black on white (thermal inverted) -->
+  <div class="photo-zone">
+    <svg width="320" height="240" viewBox="0 0 320 240" xmlns="http://www.w3.org/2000/svg">
+      <!-- White background -->
+      <rect width="320" height="240" fill="#FAFAF8"/>
+
+      <defs>
+        <!-- Dense black dithering — dark zones (figure body) -->
+        <pattern id="dd" x="0" y="0" width="8" height="8" patternUnits="userSpaceOnUse">
+          <rect width="8" height="8" fill="transparent"/>
+          <rect x="0" y="0" width="2" height="2" fill="#000" opacity=".90"/>
+          <rect x="4" y="0" width="2" height="2" fill="#000" opacity=".55"/>
+          <rect x="2" y="2" width="2" height="2" fill="#000" opacity=".72"/>
+          <rect x="6" y="2" width="2" height="2" fill="#000" opacity=".30"/>
+          <rect x="0" y="4" width="2" height="2" fill="#000" opacity=".62"/>
+          <rect x="4" y="4" width="2" height="2" fill="#000" opacity=".18"/>
+          <rect x="2" y="6" width="2" height="2" fill="#000" opacity=".40"/>
+          <rect x="6" y="6" width="2" height="2" fill="#000" opacity=".80"/>
+        </pattern>
+
+        <!-- Mid-tone black dithering — shoulders, edges -->
+        <pattern id="dm" x="0" y="0" width="8" height="8" patternUnits="userSpaceOnUse">
+          <rect width="8" height="8" fill="transparent"/>
+          <rect x="0" y="0" width="2" height="2" fill="#000" opacity=".45"/>
+          <rect x="4" y="0" width="2" height="2" fill="#000" opacity=".20"/>
+          <rect x="2" y="2" width="2" height="2" fill="#000" opacity=".35"/>
+          <rect x="6" y="2" width="2" height="2" fill="#000" opacity=".08"/>
+          <rect x="0" y="4" width="2" height="2" fill="#000" opacity=".28"/>
+          <rect x="4" y="4" width="2" height="2" fill="#000" opacity=".04"/>
+          <rect x="2" y="6" width="2" height="2" fill="#000" opacity=".15"/>
+          <rect x="6" y="6" width="2" height="2" fill="#000" opacity=".40"/>
+        </pattern>
+
+        <!-- Sparse black dithering — halo, light zones -->
+        <pattern id="ds" x="0" y="0" width="8" height="8" patternUnits="userSpaceOnUse">
+          <rect width="8" height="8" fill="transparent"/>
+          <rect x="0" y="0" width="2" height="2" fill="#000" opacity=".12"/>
+          <rect x="4" y="4" width="2" height="2" fill="#000" opacity=".06"/>
+          <rect x="6" y="2" width="2" height="2" fill="#000" opacity=".04"/>
+        </pattern>
+
+        <!-- Very sparse — ambient texture -->
+        <pattern id="da" x="0" y="0" width="8" height="8" patternUnits="userSpaceOnUse">
+          <rect width="8" height="8" fill="transparent"/>
+          <rect x="0" y="0" width="2" height="2" fill="#000" opacity=".04"/>
+          <rect x="6" y="6" width="2" height="2" fill="#000" opacity=".03"/>
+        </pattern>
+      </defs>
+
+      <!-- Ambient background texture -->
+      <rect width="320" height="240" fill="url(#da)"/>
+
+      <!-- Dark flanks (backlit: sides are darker) -->
+      <rect x="0" y="0" width="80" height="240" fill="url(#dm)" opacity=".55"/>
+      <rect x="240" y="0" width="80" height="240" fill="url(#dm)" opacity=".55"/>
+
+      <!-- FIGURE — in thermal print: figure is DARK (dense dots) -->
+      <!-- Body -->
+      <rect x="132" y="102" width="56" height="128" fill="url(#dd)"/>
+      <!-- Head -->
+      <ellipse cx="160" cy="88" rx="28" ry="32" fill="url(#dd)"/>
+
+      <!-- Backlit halo zone BEHIND figure — sparse (lighter than figure) -->
+      <!-- This reads as: figure is dark, light comes from behind -->
+      <ellipse cx="160" cy="72" rx="72" ry="62" fill="url(#ds)" opacity=".8"/>
+
+      <!-- Mid shoulder glow — transitional zone -->
+      <rect x="96" y="88" width="50" height="70" fill="url(#dm)" opacity=".6"/>
+      <rect x="174" y="88" width="50" height="70" fill="url(#dm)" opacity=".6"/>
+
+      <!-- Floor shadow -->
+      <rect x="80" y="216" width="160" height="18" fill="url(#dm)" opacity=".3"/>
+
+      <!-- Bottom edge darkening -->
+      <rect x="0" y="192" width="320" height="48" fill="url(#ds)" opacity=".7"/>
+
+      <!-- Top fade lightening — sky/ceiling behind head -->
+      <rect x="60" y="0" width="200" height="55" fill="#FAFAF8" opacity=".5"/>
+
+      <!-- Thermal scan artifacts — very faint horizontal bands -->
+      <line x1="0" y1="60" x2="320" y2="60" stroke="#000" stroke-width="0.3" opacity=".04"/>
+      <line x1="0" y1="120" x2="320" y2="120" stroke="#000" stroke-width="0.3" opacity=".03"/>
+      <line x1="0" y1="180" x2="320" y2="180" stroke="#000" stroke-width="0.3" opacity=".035"/>
+
+      <!-- Photo border — thin frame suggesting a print -->
+      <rect x="1" y="1" width="318" height="238" fill="none" stroke="#000" stroke-width="0.5" opacity=".12"/>
+
+    </svg>
+  </div>
+
+  <!-- TEXT CONTENT -->
+  <div class="content">
+
+    <div class="stamp-block">
+      <div class="stamp"><span>PROOF</span></div>
+    </div>
+
+    <div class="tagline">
+      Preuve de<br>présence nocturne
+    </div>
+
+    <div class="tagline-sub">
+      Photomaton thermique autonome.<br>
+      Une photo en quelques secondes, imprimée<br>
+      sur papier. Pas d'application. Pas d'écran.
+    </div>
+
+    <div class="rule-solid"></div>
+
+    <div class="props">
+      <div class="prop">Impression instantanée, rendu argentique</div>
+      <div class="prop">Zéro interaction numérique</div>
+      <div class="prop">Caption personnalisée — lieu, date, heure</div>
+      <div class="prop">Archive automatique pour votre communication</div>
+      <div class="prop">Installation en moins de 30 minutes</div>
+    </div>
+
+    <hr class="rule-dashed">
+
+    <div class="footer">
+      <div class="footer-line">Location · Paris</div>
+      <div class="footer-line">Clubs · Soirées · Festivals · Vernissages</div>
+      <div class="footer-url">proof-paris.com</div>
+    </div>
+
+    <div class="proof-ref">
+      <div class="proof-ref-left">
+        Ceci est une preuve.<br>
+        Imprimée sur PROOF.
+      </div>
+      <div class="sig-small"><span>PROOF</span></div>
+    </div>
+
+  </div>
+
+  <div class="tear-bottom"></div>
+
+</div>
+
+<div class="meta" style="margin-top:8px;">← Largeur réelle : 80mm · Longueur libre selon rouleau →</div>
+
+</body>
+</html>

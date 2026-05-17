@@ -73,12 +73,11 @@ void computeWaiting(CRGB* out) {
 }
 
 void computeIdle(CRGB* out) {
-  uint8_t offset = (millis() / 60) % gNumLeds;
-  for (int i = 0; i < gNumLeds; i++) {
-    uint8_t angle = ((uint16_t)(i + offset) * 255) / gNumLeds;
-    uint8_t b     = qadd8(55, sin8(angle) / 4);
-    out[i] = CRGB(b, (uint8_t)(b * 200 / 255), (uint8_t)(b * 100 / 255));
-  }
+  // Breathe: all LEDs pulse together in warm white over a ~4-second cycle.
+  uint8_t phase  = (uint8_t)(millis() / 16);       // 256 steps per 4096 ms
+  uint8_t sinVal = sin8(phase);                     // 0–255 sine wave
+  uint8_t b      = (uint8_t)map(sinVal, 0, 255, 18, 160);
+  fill_solid(out, gNumLeds, CRGB(b, (uint8_t)(b * 200 / 255), (uint8_t)(b * 100 / 255)));
 }
 
 void computeCountdown(CRGB* out) {
