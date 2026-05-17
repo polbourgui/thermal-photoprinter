@@ -179,13 +179,19 @@ else
 fi
 
 # ── modprobe sudoers (usblp) ────────────────────────────────────────────────────
+# Use the canonical (realpath) of modprobe: on Ubuntu 22.04+ /sbin→/usr/sbin,
+# and sudo matches against the resolved path, not the symlink.
 SUDOERS_MOD=/etc/sudoers.d/photobooth-modprobe
+MODPROBE_REAL=$(readlink -f "$(command -v modprobe)")
 if [[ ! -f "$SUDOERS_MOD" ]]; then
-    echo "$USER ALL=(ALL) NOPASSWD: /sbin/modprobe -r usblp" | sudo tee "$SUDOERS_MOD" > /dev/null
+    echo "$USER ALL=(ALL) NOPASSWD: $MODPROBE_REAL -r usblp" | sudo tee "$SUDOERS_MOD" > /dev/null
     sudo chmod 440 "$SUDOERS_MOD"
-    ok "Sudoers modprobe configuré (détachement usblp sans mot de passe)"
+    ok "Sudoers modprobe configuré → $MODPROBE_REAL"
 else
-    ok "Sudoers modprobe déjà présent"
+    # Re-write with current real path in case it changed (e.g. after OS upgrade)
+    echo "$USER ALL=(ALL) NOPASSWD: $MODPROBE_REAL -r usblp" | sudo tee "$SUDOERS_MOD" > /dev/null
+    sudo chmod 440 "$SUDOERS_MOD"
+    ok "Sudoers modprobe mis à jour → $MODPROBE_REAL"
 fi
 
 # ── summary ───────────────────────────────────────────────────────────────────

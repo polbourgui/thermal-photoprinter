@@ -9,28 +9,27 @@ logger = logging.getLogger(__name__)
 
 
 def _detach_kernel_driver(vendor_id: int, product_id: int) -> None:
-    """Detach usblp (or any kernel driver) from the printer USB interface.
+    """Detach usblp from the printer so escpos can call set_configuration().
 
-    Two-step approach:
-    1. modprobe -r usblp  — unloads the kernel module entirely (needs sudoers rule).
-    2. pyusb detach       — catches any interface still claimed after step 1.
-    dispose_resources() is mandatory: without it our temporary pyusb handle
-    keeps libusb open and escpos's own find() gets EBUSY on set_configuration().
+    Order matters:
+    1. pyusb detach — removes usblp's claim on each interface (module still loaded).
+    2. dispose_resources — releases our libusb handle.
+    3. modprobe -r usblp — NOW safe to unload (no device claiming it anymore).
+       Uses os.path.realpath so the path matches the sudoers rule exactly
+       (on Ubuntu 22.04+, /sbin is a symlink; sudo matches the canonical path).
+
+    Without step 3, usblp could re-bind between dispose and escpos's set_configuration().
     """
+    import shutil
     import subprocess
     import usb.core
     import usb.util
 
-    # Step 1 — unload the module (no-op if already unloaded; requires sudoers)
-    subprocess.run(["sudo", "modprobe", "-r", "usblp"],
-                   capture_output=True, timeout=5)
-
-    # Step 2 — pyusb interface-level detach
+    # Step 1 — pyusb interface-level detach (module still loaded, just unclaimed)
     dev = usb.core.find(idVendor=vendor_id, idProduct=product_id)
-    if dev is None:
-        return
-    try:
-        for cfg in dev:
+    if dev is not None:
+        try:
+            cfg = dev.get_active_configuration()
             for intf in cfg:
                 n = intf.bInterfaceNumber
                 try:
@@ -39,11 +38,18 @@ def _detach_kernel_driver(vendor_id: int, product_id: int) -> None:
                         logger.debug("Detached kernel driver from interface %d", n)
                 except Exception as exc:
                     logger.debug("Interface %d detach: %s", n, exc)
-    except Exception as exc:
-        logger.debug("Driver detach: %s", exc)
-    finally:
-        # MUST release our handle so escpos's usb.core.find() can claim the device.
-        usb.util.dispose_resources(dev)
+        except Exception as exc:
+            logger.debug("Driver detach: %s", exc)
+        finally:
+            # Step 2 — release our handle before calling modprobe
+            usb.util.dispose_resources(dev)
+
+    # Step 3 — unload the module (safe now; realpath matches sudoers rule)
+    modprobe = os.path.realpath(shutil.which("modprobe") or "/sbin/modprobe")
+    result = subprocess.run(["sudo", modprobe, "-r", "usblp"],
+                            capture_output=True, timeout=5)
+    if result.returncode != 0:
+        logger.debug("modprobe -r usblp: %s", result.stderr.decode().strip())
 
 
 def _get_printer():
