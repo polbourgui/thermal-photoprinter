@@ -85,13 +85,12 @@ void computeCountdown(CRGB* out) {
   unsigned long elapsed = min((unsigned long)COUNTDOWN_MS, millis() - stateStart);
   int lit = map((long)elapsed, 0, COUNTDOWN_MS, gNumLeds, 0);
   for (int i = 0; i < gNumLeds; i++) {
-    if (i < lit - 1) {
-      out[i] = WARM_WHITE;
-    } else if (i == lit - 1 && lit > 0) {
-      out[i] = CRGB(WARM_WHITE.r / 2, WARM_WHITE.g / 2, WARM_WHITE.b / 2);
-    } else {
-      out[i] = CRGB::Black;
-    }
+    int dist = i - lit;
+    if      (dist < 0)             out[i] = WARM_WHITE;
+    else if (dist == 0 && lit > 0) out[i] = CRGB(100, 78, 39);
+    else if (dist == 1 && lit > 0) out[i] = CRGB(45,  35, 18);
+    else if (dist == 2 && lit > 0) out[i] = CRGB(15,  12,  6);
+    else                           out[i] = CRGB::Black;
   }
 }
 
@@ -102,7 +101,7 @@ void computeFlash(CRGB* out) {
 
 void computePrinting(CRGB* out) {
   // 250 ms per step → ~3.75 s per full rotation on a 15-LED ring.
-  uint8_t pos = (millis() / 120) % gNumLeds;
+  uint8_t pos = ((millis() - stateStart) / 120) % gNumLeds;
   for (int i = 0; i < gNumLeds; i++) {
     int trail = (i - pos + gNumLeds) % gNumLeds; // distance derrière la tête
     int lead  = (pos - i + gNumLeds) % gNumLeds; // distance devant la tête
