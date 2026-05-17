@@ -101,7 +101,7 @@ void computeFlash(CRGB* out) {
 }
 
 void computePrinting(CRGB* out) {
-  uint8_t pos = (millis() / 25) % gNumLeds;
+  uint8_t pos = (millis() / 60) % gNumLeds;
   for (int i = 0; i < gNumLeds; i++) {
     int     dist = (i - pos + gNumLeds) % gNumLeds;
     uint8_t b    = (dist < 7) ? (uint8_t)(255 - dist * 36) : 0;
