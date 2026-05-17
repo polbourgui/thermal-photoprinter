@@ -101,10 +101,12 @@ void computeFlash(CRGB* out) {
 }
 
 void computePrinting(CRGB* out) {
-  uint8_t pos = (millis() / 120) % gNumLeds;
+  // Fixed 8-second rotation period regardless of LED count.
+  const uint32_t PERIOD_MS = 8000;
+  uint8_t pos = (uint8_t)((millis() % PERIOD_MS) * gNumLeds / PERIOD_MS);
   for (int i = 0; i < gNumLeds; i++) {
     int     dist = (i - pos + gNumLeds) % gNumLeds;
-    uint8_t b    = (dist < 7) ? (uint8_t)(255 - dist * 36) : 0;
+    uint8_t b    = (dist < 4) ? (uint8_t)(255 - dist * 64) : 0;
     out[i] = CRGB(0, b, 0);
   }
 }
