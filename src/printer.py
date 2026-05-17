@@ -32,16 +32,12 @@ class _UsbPrinter(_EscposBase):
         self.out_ep = out_ep
 
     def _raw(self, msg: bytes) -> None:
-        self.device.write(self.out_ep, msg)
+        self.device.write(self.out_ep, msg, timeout=5000)
 
     def close(self) -> None:
         import usb.util
         try:
             usb.util.release_interface(self.device, 0)
-        except Exception:
-            pass
-        try:
-            self.device.attach_kernel_driver(0)
         except Exception:
             pass
         try:
@@ -112,13 +108,14 @@ def _get_printer() -> _UsbPrinter:
 
     in_addr  = in_ep.bEndpointAddress  if in_ep  else 0x82
     out_addr = out_ep.bEndpointAddress if out_ep else 0x01
-    logger.debug("Printer claimed: in=0x%02x out=0x%02x", in_addr, out_addr)
+    logger.info("Printer claimed: in=0x%02x out=0x%02x", in_addr, out_addr)
 
     return _UsbPrinter(dev, in_addr, out_addr, profile=profile)
 
 
 def get_status() -> dict:
     """Query TM-M30 sensors via ESC/POS DLE EOT (real-time status)."""
+    logger.info("get_status: opening printer")
     try:
         p = _get_printer()
         try:
@@ -154,6 +151,7 @@ def get_status() -> dict:
             "ok": not (cover_open or paper_end or error_fatal),
         }
     except Exception as exc:
+        logger.info("get_status error: %s", exc)
         return {"ok": False, "error": str(exc)}
 
 
