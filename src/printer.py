@@ -1,5 +1,6 @@
 import logging
 import os
+import time
 from PIL import Image
 
 from config import get_settings
@@ -10,38 +11,44 @@ logger = logging.getLogger(__name__)
 def _get_printer():
     import escpos.printer
     vendor_id  = int(os.getenv("PRINTER_VENDOR_ID",  "0x04b8"), 16)
-    product_id = int(os.getenv("PRINTER_PRODUCT_ID", "0x0e20"), 16)  # TM-m30 Bluetooth/USB
+    product_id = int(os.getenv("PRINTER_PRODUCT_ID", "0x0e20"), 16)
     profile    = os.getenv("PRINTER_PROFILE", "default")
     return escpos.printer.Usb(vendor_id, product_id, profile=profile)
 
 
 def get_status() -> dict:
     """
-    Query TM-M30 real-time sensors via DLE EOT.
-    Returns a dict ready for /healthz. Never raises — errors become status fields.
+    Query TM-M30 sensors via ESC/POS DLE EOT (real-time status).
+    Works regardless of python-escpos version.
     """
     try:
         p = _get_printer()
         try:
-            raw = p.get_printer_status()
+            results = []
+            for n in (1, 2, 3, 4):          # printer / offline / error / paper
+                p._raw(bytes([0x10, 0x04, n]))
+                time.sleep(0.05)
+                data = p.device.read(p.in_ep, 1, timeout=300)
+                results.append(data[0] if data else 0)
         finally:
             p.close()
 
-        paper = raw.get("paper", {})
-        error = raw.get("error", {})
+        s1, s2, s3, s4 = results
+        cover_open     = bool(s2 & 0x04)          # byte 2, bit 2
+        paper_end      = bool(s2 & 0x20) or bool(s4 & 0x60)  # offline + paper sensor
+        paper_near_end = bool(s4 & 0x0C)          # byte 4, bits 2-3
+        error_fatal    = bool(s3 & 0x60)          # byte 3, bits 5-6
+        error_recover  = bool(s3 & 0x08)          # byte 3, bit 3
+
         return {
-            "online":         raw.get("ready", {}).get("status", False),
-            "paper_present":  paper.get("paperPresent", None),
-            "paper_near_end": paper.get("paperNearEnd", False),
-            "paper_end":      paper.get("paperEnd", False),
-            "cover_open":     paper.get("paperRecoverableError", False),
-            "error_fatal":    error.get("Fatal", False),
-            "error_recover":  error.get("Recoverable", False),
-            "ok": (
-                not paper.get("paperEnd", True)
-                and not error.get("Fatal", True)
-                and not paper.get("paperRecoverableError", True)
-            ),
+            "online":         bool(s1 & 0x08),
+            "paper_present":  not paper_end,
+            "paper_near_end": paper_near_end,
+            "paper_end":      paper_end,
+            "cover_open":     cover_open,
+            "error_fatal":    error_fatal,
+            "error_recover":  error_recover,
+            "ok": not (cover_open or paper_end or error_fatal),
         }
     except Exception as exc:
         return {"ok": False, "error": str(exc)}
@@ -62,4 +69,5 @@ def print_ticket(ticket: Image.Image) -> None:
         logger.info("Printed ticket (%dx%d px)", ticket.width, ticket.height)
     finally:
         p.close()
+
 
