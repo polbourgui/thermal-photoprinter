@@ -27,10 +27,11 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(name)-20s %(levelname)-8s %(message)s",
     stream=sys.stdout,
+    force=True,   # override any handlers added by uvicorn/other imports
 )
 # Suppress verbose internal messages from python-escpos
-logging.getLogger("root").setLevel(logging.WARNING)
 logging.getLogger("escpos").setLevel(logging.WARNING)
+logging.getLogger("httpx").setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 
 
