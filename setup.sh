@@ -72,6 +72,17 @@ else
     ok ".env already present"
 fi
 
+# ── blacklist usblp ───────────────────────────────────────────────────────────
+# usblp claims the printer before python-escpos can, causing Resource busy
+BLACKLIST=/etc/modprobe.d/blacklist-usblp.conf
+if [[ ! -f "$BLACKLIST" ]]; then
+    echo "blacklist usblp" | sudo tee "$BLACKLIST" > /dev/null
+    sudo modprobe -r usblp 2>/dev/null || true
+    ok "usblp blacklisté (libère l'imprimante pour python-escpos)"
+else
+    ok "usblp déjà blacklisté"
+fi
+
 # ── udev rules ────────────────────────────────────────────────────────────────
 RULES=/etc/udev/rules.d/60-photobooth.rules
 if [[ ! -f "$RULES" ]]; then
