@@ -192,9 +192,14 @@ def main() -> None:
             time.sleep(3.0)
 
             # ── FLASH + CAPTURE ───────────────────────────────────
+            # Timeline (firmware FLASH is now instantaneous, no fade):
+            #   t=0      FLASH sent → ESP shows full white within 1 frame (~20ms)
+            #   t=50ms   camera.capture() called
+            #   t=50–90ms camera flushes stale frames (grab loop, ~2 frames @ 30fps)
+            #   t=90ms   shutter reads fresh frame — LEDs at peak, 210ms of flash left
             if esp:
                 esp.send("FLASH")
-            time.sleep(0.1)
+            time.sleep(0.05)
 
             if camera:
                 raw_image = camera.capture()

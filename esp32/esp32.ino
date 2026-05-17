@@ -57,9 +57,10 @@ void setState(State newState) {
   if (newState == state) return;
   memcpy(fromLeds, leds, sizeof(leds));
   transitionStart = millis();
-  inTransition    = true;
-  state           = newState;
-  stateStart      = millis();
+  // FLASH must be instantaneous — a cross-fade defeats the purpose of a strobe.
+  inTransition = (newState != STATE_FLASH);
+  state        = newState;
+  stateStart   = millis();
 }
 
 // ─── animations LED par état ─────────────────────────────────────────────────
