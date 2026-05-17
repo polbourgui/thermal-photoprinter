@@ -155,22 +155,18 @@ async def virtual_trigger():
 
 @app.get("/healthz")
 async def healthz():
-    def _usb_present(vid: str, pid: str) -> bool:
-        try:
-            out = subprocess.check_output(["lsusb"], text=True)
-            return f"{vid}:{pid}" in out.lower()
-        except Exception:
-            return False
+    from printer import get_status as printer_status
 
     def _serial_present() -> bool:
         return Path("/dev/ttyUSB0").exists() or Path("/dev/ttyESP8266").exists()
 
     storage_path = Path(get_settings().hardware.storage_path)
     disk = shutil.disk_usage(storage_path if storage_path.exists() else ".")
+    printer = printer_status()
 
     return JSONResponse({
         "camera":        Path("/dev/video0").exists(),
-        "printer":       _usb_present("04b8", "0e20") or _usb_present("04b8", "0e02"),
+        "printer":       printer,
         "esp8266":       _serial_present(),
         "disk_free_gb":  round(disk.free / 1e9, 1),
         "disk_used_pct": round(disk.used / disk.total * 100),
