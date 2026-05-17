@@ -8,11 +8,28 @@ from config import get_settings
 logger = logging.getLogger(__name__)
 
 
+def _detach_kernel_driver(vendor_id: int, product_id: int) -> None:
+    """Detach usblp (or any kernel driver) from the printer USB interface.
+    usblp can re-attach after a replug even when blacklisted, causing EBUSY."""
+    import usb.core
+    dev = usb.core.find(idVendor=vendor_id, idProduct=product_id)
+    if dev is None:
+        return
+    for iface in range(3):
+        try:
+            if dev.is_kernel_driver_active(iface):
+                dev.detach_kernel_driver(iface)
+                logger.debug("Detached kernel driver from interface %d", iface)
+        except Exception:
+            pass
+
+
 def _get_printer():
     import escpos.printer
     vendor_id  = int(os.getenv("PRINTER_VENDOR_ID",  "0x04b8"), 16)
     product_id = int(os.getenv("PRINTER_PRODUCT_ID", "0x0e20"), 16)
     profile    = os.getenv("PRINTER_PROFILE", "default")
+    _detach_kernel_driver(vendor_id, product_id)
     return escpos.printer.Usb(vendor_id, product_id, profile=profile)
 
 
