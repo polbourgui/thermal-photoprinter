@@ -15,8 +15,6 @@ def _detach_kernel_driver(vendor_id: int, product_id: int) -> None:
     1. pyusb detach — removes usblp's claim on each interface (module still loaded).
     2. dispose_resources — releases our libusb handle.
     3. modprobe -r usblp — NOW safe to unload (no device claiming it anymore).
-       Uses os.path.realpath so the path matches the sudoers rule exactly
-       (on Ubuntu 22.04+, /sbin is a symlink; sudo matches the canonical path).
 
     Without step 3, usblp could re-bind between dispose and escpos's set_configuration().
     """
@@ -44,8 +42,11 @@ def _detach_kernel_driver(vendor_id: int, product_id: int) -> None:
             # Step 2 — release our handle before calling modprobe
             usb.util.dispose_resources(dev)
 
-    # Step 3 — unload the module (safe now; realpath matches sudoers rule)
-    modprobe = os.path.realpath(shutil.which("modprobe") or "/sbin/modprobe")
+    # Step 3 — unload the module (safe now that no interface claims it).
+    # Use the modprobe SYMLINK, not realpath: sudo resolves to realpath for
+    # sudoers matching (/usr/bin/kmod), but executes via the symlink so kmod
+    # runs in modprobe-compatibility mode (kmod -r is invalid; modprobe -r works).
+    modprobe = shutil.which("modprobe") or "/usr/sbin/modprobe"
     result = subprocess.run(["sudo", modprobe, "-r", "usblp"],
                             capture_output=True, timeout=5)
     if result.returncode != 0:
