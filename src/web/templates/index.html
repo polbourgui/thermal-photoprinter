@@ -258,6 +258,32 @@
         </div>
       </div>
 
+      <!-- Hardware -->
+      <div class="card mb-3">
+        <div class="card-header">Hardware</div>
+        <div class="card-body">
+
+          <div class="mb-1">
+            <label class="form-label d-flex justify-content-between">
+              Nombre de LEDs WS2812B
+              <span class="value-display" id="numleds-val">{{ s.hardware.num_leds }}</span>
+            </label>
+            <input type="range" class="form-range" name="num_leds" id="num_leds"
+              min="1" max="500" step="1"
+              value="{{ s.hardware.num_leds }}"
+              oninput="updateLedBudget(this.value)">
+            <div class="d-flex justify-content-between" style="font-size:.7rem;color:#555">
+              <span>1</span><span>250</span><span>500</span>
+            </div>
+          </div>
+          <div id="led-budget" style="font-size:.78rem; color:#aaa; margin-top:.25rem;"></div>
+          <div class="form-text text-muted" style="font-size:.72rem">
+            Limite la luminosité automatiquement pour ne pas dépasser le budget courant USB de l'ESP8266 (~420 mA disponibles pour le bandeau).
+          </div>
+
+        </div>
+      </div>
+
       <!-- Printer -->
       <div class="card mb-4">
         <div class="card-header">Printer</div>
@@ -485,6 +511,19 @@
   </div>
 
   <script>
+    function updateLedBudget(n) {
+      n = parseInt(n);
+      document.getElementById('numleds-val').textContent = n;
+      const brightness = Math.min(255, Math.floor((420 * 255) / (n * 60)));
+      const peakMa     = Math.round(n * 60 * brightness / 255);
+      const pct        = Math.round(brightness / 255 * 100);
+      const color       = brightness < 20 ? '#f87171' : brightness < 50 ? '#fbbf24' : '#4ade80';
+      document.getElementById('led-budget').innerHTML =
+        `Luminosité max : <span style="color:${color};font-weight:600">${brightness}/255 (${pct}%)</span>`
+        + ` — pic ~${peakMa} mA`;
+    }
+    updateLedBudget({{ s.hardware.num_leds }});
+
     function refreshMockup() {
       const img = document.getElementById('mockup-img');
       img.src = '/mockup?' + Date.now();

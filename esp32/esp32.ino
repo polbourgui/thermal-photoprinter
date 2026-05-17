@@ -12,7 +12,7 @@
 #define BTN_LED_PIN  12  // D6
 #define BTN_PIN      14  // D5
 
-#define NUM_LEDS     111
+#define NUM_LEDS     500   // array upper bound — actual count set at runtime
 #define BAUD_RATE    115200
 #define DEBOUNCE_MS  50
 #define FLASH_MS     300
@@ -36,6 +36,7 @@ enum State {
   STATE_ERROR
 };
 
+uint16_t      gNumLeds        = 111;   // updated at runtime via LEDS:n
 State         state           = STATE_WAITING;
 unsigned long stateStart      = 0;
 unsigned long transitionStart = 0;
@@ -68,13 +69,13 @@ void computeWaiting(CRGB* out) {
   uint8_t b = (t < 1000)
     ? (uint8_t)map(t,    0, 1000, 10, 90)
     : (uint8_t)map(t, 1000, 2000, 90, 10);
-  fill_solid(out, NUM_LEDS, CRGB(0, 0, b));
+  fill_solid(out, gNumLeds, CRGB(0, 0, b));
 }
 
 void computeIdle(CRGB* out) {
-  uint8_t offset = (millis() / 60) % NUM_LEDS;
-  for (int i = 0; i < NUM_LEDS; i++) {
-    uint8_t angle = ((uint16_t)(i + offset) * 255) / NUM_LEDS;
+  uint8_t offset = (millis() / 60) % gNumLeds;
+  for (int i = 0; i < gNumLeds; i++) {
+    uint8_t angle = ((uint16_t)(i + offset) * 255) / gNumLeds;
     uint8_t b     = qadd8(55, sin8(angle) / 4);
     out[i] = CRGB(b, (uint8_t)(b * 200 / 255), (uint8_t)(b * 100 / 255));
   }
@@ -82,8 +83,8 @@ void computeIdle(CRGB* out) {
 
 void computeCountdown(CRGB* out) {
   unsigned long elapsed = min((unsigned long)COUNTDOWN_MS, millis() - stateStart);
-  int lit = map((long)elapsed, 0, COUNTDOWN_MS, NUM_LEDS, 0);
-  for (int i = 0; i < NUM_LEDS; i++) {
+  int lit = map((long)elapsed, 0, COUNTDOWN_MS, gNumLeds, 0);
+  for (int i = 0; i < gNumLeds; i++) {
     if (i < lit - 1) {
       out[i] = WARM_WHITE;
     } else if (i == lit - 1 && lit > 0) {
@@ -96,13 +97,13 @@ void computeCountdown(CRGB* out) {
 
 void computeFlash(CRGB* out) {
   unsigned long elapsed = millis() - stateStart;
-  fill_solid(out, NUM_LEDS, elapsed < FLASH_MS ? FLASH_WHITE : DIM_WARM);
+  fill_solid(out, gNumLeds, elapsed < FLASH_MS ? FLASH_WHITE : DIM_WARM);
 }
 
 void computePrinting(CRGB* out) {
-  uint8_t pos = (millis() / 25) % NUM_LEDS;
-  for (int i = 0; i < NUM_LEDS; i++) {
-    int     dist = (i - pos + NUM_LEDS) % NUM_LEDS;
+  uint8_t pos = (millis() / 25) % gNumLeds;
+  for (int i = 0; i < gNumLeds; i++) {
+    int     dist = (i - pos + gNumLeds) % gNumLeds;
     uint8_t b    = (dist < 7) ? (uint8_t)(255 - dist * 36) : 0;
     out[i] = CRGB(0, b, 0);
   }
@@ -111,10 +112,10 @@ void computePrinting(CRGB* out) {
 void computeDone(CRGB* out) {
   unsigned long t = millis() - stateStart;
   if (t < 300) {
-    fill_solid(out, NUM_LEDS, CRGB::Green);
+    fill_solid(out, gNumLeds, CRGB::Green);
   } else if (t < 700) {
     uint8_t b = (uint8_t)map(t, 300, 700, 255, 0);
-    fill_solid(out, NUM_LEDS, CRGB(0, b, 0));
+    fill_solid(out, gNumLeds, CRGB(0, b, 0));
   } else {
     setState(STATE_IDLE);
     computeIdle(out);
@@ -123,7 +124,7 @@ void computeDone(CRGB* out) {
 
 void computeError(CRGB* out) {
   bool on = (millis() / 150) % 2;
-  fill_solid(out, NUM_LEDS, on ? CRGB::Red : CRGB::Black);
+  fill_solid(out, gNumLeds, on ? CRGB::Red : CRGB::Black);
 }
 
 // ─── luminosité LED bouton par état ──────────────────────────────────────────
@@ -148,12 +149,24 @@ void handleSerial() {
     char c = (char)Serial.read();
     if (c == '\n') {
       buf.trim();
-      if      (buf == "IDLE")      setState(STATE_IDLE);
-      else if (buf == "COUNTDOWN") setState(STATE_COUNTDOWN);
-      else if (buf == "FLASH")     setState(STATE_FLASH);
-      else if (buf == "PRINTING")  setState(STATE_PRINTING);
-      else if (buf == "DONE")      setState(STATE_DONE);
-      else if (buf == "ERROR")     setState(STATE_ERROR);
+      if      (buf == "IDLE")            setState(STATE_IDLE);
+      else if (buf == "COUNTDOWN")       setState(STATE_COUNTDOWN);
+      else if (buf == "FLASH")           setState(STATE_FLASH);
+      else if (buf == "PRINTING")        setState(STATE_PRINTING);
+      else if (buf == "DONE")            setState(STATE_DONE);
+      else if (buf == "ERROR")           setState(STATE_ERROR);
+      else if (buf.startsWith("LEDS:")) {
+        int n = buf.substring(5).toInt();
+        if (n >= 1 && n <= NUM_LEDS) {
+          gNumLeds = (uint16_t)n;
+          fill_solid(leds,       NUM_LEDS, CRGB::Black);
+          fill_solid(targetLeds, NUM_LEDS, CRGB::Black);
+        }
+      }
+      else if (buf.startsWith("BRIGHT:")) {
+        int b = buf.substring(7).toInt();
+        FastLED.setBrightness((uint8_t)constrain(b, 1, 255));
+      }
       buf = "";
     } else {
       buf += c;
@@ -184,7 +197,7 @@ void setup() {
 
   // WS2812B — ordre de couleur GRB (standard WS2812)
   FastLED.addLeds<WS2812B, LED_PIN, GRB>(leds, NUM_LEDS);
-  FastLED.setBrightness(15);  // ~400mA max — alimentation externe requise pour plus
+  FastLED.setBrightness(17);  // safe default for 111 LEDs on USB — overridden by BRIGHT:n
   fill_solid(leds, NUM_LEDS, CRGB::Black);
   FastLED.show();
 
@@ -200,6 +213,9 @@ void setup() {
 void loop() {
   handleSerial();
   handleButton();
+
+  // Clear LEDs beyond active count so reducing gNumLeds leaves no ghost pixels.
+  fill_solid(targetLeds + gNumLeds, NUM_LEDS - gNumLeds, CRGB::Black);
 
   switch (state) {
     case STATE_WAITING:   computeWaiting(targetLeds);   break;

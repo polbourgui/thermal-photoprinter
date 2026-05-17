@@ -9,8 +9,10 @@ from fastapi.responses import JSONResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
+import state
 from config import (
     CaptionSettings,
+    HardwareSettings,
     ImageSettings,
     LayoutSettings,
     PrinterSettings,
@@ -73,7 +75,10 @@ async def update_settings(
     proof_font_size: int = Form(18),
     footer_font_size: int = Form(20),
     separator: str = Form("off"),
+    # Hardware
+    num_leds: int = Form(111),
 ):
+    hw = get_settings().hardware  # preserve fields not exposed in the form
     settings = Settings(
         image=ImageSettings(
             dither_algorithm=dither_algorithm,
@@ -112,8 +117,19 @@ async def update_settings(
             footer_font_size=max(10, min(40, footer_font_size)),
             separator=(separator == "on"),
         ),
+        hardware=HardwareSettings(
+            camera_device=hw.camera_device,
+            serial_port=hw.serial_port,
+            storage_path=hw.storage_path,
+            num_leds=max(1, min(500, num_leds)),
+        ),
     )
     save_settings(settings)
+    if state._esp is not None:
+        try:
+            state._esp.apply_led_config(settings.hardware.num_leds)
+        except Exception:
+            pass
     return RedirectResponse(url="/", status_code=303)
 
 

@@ -49,6 +49,19 @@ class ESP32:
                 return
         logger.warning("READY not received — ESP8266 already running, continuing")
 
+    def apply_led_config(self, num_leds: int) -> None:
+        """Send LED count and safe brightness cap computed from USB current budget."""
+        # 500 mA USB − 80 mA ESP board = 420 mA available for the strip.
+        # Full-white WS2812B draws up to 60 mA per LED (20 mA/channel × 3).
+        max_brightness = min(255, (420 * 255) // max(1, num_leds * 60))
+        self.send(f"LEDS:{num_leds}")
+        self.send(f"BRIGHT:{max_brightness}")
+        peak_ma = num_leds * 60 * max_brightness // 255
+        logger.info(
+            "LED config: %d LEDs, brightness cap %d/255 (~%d mA peak)",
+            num_leds, max_brightness, peak_ma,
+        )
+
     def wait_for_btn_press(self) -> None:
         while True:
             line = self._readline()

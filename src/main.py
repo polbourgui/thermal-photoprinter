@@ -9,6 +9,7 @@ from datetime import datetime
 import uvicorn
 from dotenv import load_dotenv
 
+import state
 import trigger as trig
 from camera import Camera
 from config import load_settings, get_settings
@@ -157,7 +158,9 @@ def main() -> None:
 
     if esp:
         esp.open()
+        state._esp = esp
         esp.wait_for_ready()
+        esp.apply_led_config(hw.num_leds)
         esp.send("IDLE")
         threading.Thread(target=_serial_reader, args=(esp,), daemon=True, name="serial-reader").start()
     else:
