@@ -10,18 +10,40 @@ logger = logging.getLogger(__name__)
 
 def _detach_kernel_driver(vendor_id: int, product_id: int) -> None:
     """Detach usblp (or any kernel driver) from the printer USB interface.
-    usblp can re-attach after a replug even when blacklisted, causing EBUSY."""
+
+    Two-step approach:
+    1. modprobe -r usblp  — unloads the kernel module entirely (needs sudoers rule).
+    2. pyusb detach       — catches any interface still claimed after step 1.
+    dispose_resources() is mandatory: without it our temporary pyusb handle
+    keeps libusb open and escpos's own find() gets EBUSY on set_configuration().
+    """
+    import subprocess
     import usb.core
+    import usb.util
+
+    # Step 1 — unload the module (no-op if already unloaded; requires sudoers)
+    subprocess.run(["sudo", "modprobe", "-r", "usblp"],
+                   capture_output=True, timeout=5)
+
+    # Step 2 — pyusb interface-level detach
     dev = usb.core.find(idVendor=vendor_id, idProduct=product_id)
     if dev is None:
         return
-    for iface in range(3):
-        try:
-            if dev.is_kernel_driver_active(iface):
-                dev.detach_kernel_driver(iface)
-                logger.debug("Detached kernel driver from interface %d", iface)
-        except Exception:
-            pass
+    try:
+        for cfg in dev:
+            for intf in cfg:
+                n = intf.bInterfaceNumber
+                try:
+                    if dev.is_kernel_driver_active(n):
+                        dev.detach_kernel_driver(n)
+                        logger.debug("Detached kernel driver from interface %d", n)
+                except Exception as exc:
+                    logger.debug("Interface %d detach: %s", n, exc)
+    except Exception as exc:
+        logger.debug("Driver detach: %s", exc)
+    finally:
+        # MUST release our handle so escpos's usb.core.find() can claim the device.
+        usb.util.dispose_resources(dev)
 
 
 def _get_printer():

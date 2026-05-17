@@ -178,6 +178,16 @@ else
     ok "Sudoers nmcli déjà présent"
 fi
 
+# ── modprobe sudoers (usblp) ────────────────────────────────────────────────────
+SUDOERS_MOD=/etc/sudoers.d/photobooth-modprobe
+if [[ ! -f "$SUDOERS_MOD" ]]; then
+    echo "$USER ALL=(ALL) NOPASSWD: /sbin/modprobe -r usblp" | sudo tee "$SUDOERS_MOD" > /dev/null
+    sudo chmod 440 "$SUDOERS_MOD"
+    ok "Sudoers modprobe configuré (détachement usblp sans mot de passe)"
+else
+    ok "Sudoers modprobe déjà présent"
+fi
+
 # ── summary ───────────────────────────────────────────────────────────────────
 echo ""
 echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
